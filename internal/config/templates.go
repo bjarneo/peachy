@@ -136,6 +136,12 @@ func ProcessTemplateContent(content string, variables map[string]string) string 
 			}
 			return hexToRgba(value, alpha)
 		})
+
+		// Replace {key.yaru} (maps color to Yaru icon theme variant)
+		if strings.HasPrefix(value, "#") {
+			yaruValue := hexToYaruTheme(value)
+			result = strings.ReplaceAll(result, "{"+key+".yaru}", yaruValue)
+		}
 	}
 
 	return result
@@ -163,6 +169,46 @@ func hexToRgba(hex string, alpha string) string {
 	var r, g, b int
 	_, _ = fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
 	return fmt.Sprintf("rgba(%d,%d,%d,%s)", r, g, b, alpha)
+}
+
+// hexToYaruTheme maps a hex color to a Yaru icon theme variant based on hue
+func hexToYaruTheme(hex string) string {
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) != 6 {
+		return "Yaru"
+	}
+
+	var r, g, b int
+	_, _ = fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+
+	// Convert to HSL to get hue
+	c, err := color.NewColorFromHex(hex)
+	if err != nil {
+		return "Yaru"
+	}
+	hue := c.HSL.H
+
+	// Map hue ranges to Yaru icon theme variants
+	switch {
+	case hue >= 345 || hue < 15:
+		return "Yaru-red"
+	case hue >= 15 && hue < 30:
+		return "Yaru-wartybrown"
+	case hue >= 30 && hue < 60:
+		return "Yaru-yellow"
+	case hue >= 60 && hue < 90:
+		return "Yaru-olive"
+	case hue >= 90 && hue < 165:
+		return "Yaru-sage"
+	case hue >= 165 && hue < 195:
+		return "Yaru-prussiangreen"
+	case hue >= 195 && hue < 255:
+		return "Yaru-blue"
+	case hue >= 255 && hue < 285:
+		return "Yaru-purple"
+	default:
+		return "Yaru-magenta"
+	}
 }
 
 // GenerateThemeFiles processes embedded templates and generates theme files

@@ -220,8 +220,8 @@ func (p Preview) View() string {
 	borderStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("8")). // Bright Black
-		Width(p.width).
-		Height(p.height)
+		Padding(1).
+		Width(p.width)
 
 	return borderStyle.Render(sb.String())
 }

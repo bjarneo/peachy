@@ -519,18 +519,28 @@ func (m Model) saveTheme() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) updateComponentSizes() {
-	// Calculate component sizes based on window size
-	listWidth := m.width / 2
-	if listWidth > 50 {
-		listWidth = 50
+	// Guard against zero/invalid sizes before WindowSizeMsg is received
+	if m.width < 40 || m.height < 20 {
+		return
 	}
-	previewWidth := m.width - listWidth - 4
+
+	// Calculate component sizes - both panels same width
+	panelWidth := (m.width - 6) / 2 // Account for gap and margins
+	if panelWidth < 30 {
+		panelWidth = 30
+	}
+	if panelWidth > 50 {
+		panelWidth = 50
+	}
 
 	contentHeight := m.height - 6 // Account for header and help bar
+	if contentHeight < 10 {
+		contentHeight = 10
+	}
 
-	m.colorList.SetSize(listWidth, contentHeight)
-	m.preview.SetSize(previewWidth, contentHeight)
-	m.colorEditor.SetSize(listWidth, contentHeight)
+	m.colorList.SetSize(panelWidth, contentHeight)
+	m.preview.SetSize(panelWidth, contentHeight)
+	m.colorEditor.SetSize(panelWidth, contentHeight)
 	m.filePicker.SetSize(m.width-10, m.height-10)
 	m.help.SetSize(60, 30)
 }
@@ -626,97 +636,76 @@ func (m Model) renderThemeBrowser() string {
 }
 
 func (m Model) renderLayout(left, right string) string {
-	var sb strings.Builder
+	// Build header
+	headerTitle := HeaderStyle.Render("Peachy - Theme Creator")
 
-	// Header
-	sb.WriteString(HeaderStyle.Render("Peachy - Theme Creator"))
+	// Build subtitle line (filename + mode)
+	var subtitleParts []string
 	if m.imagePath != "" {
-		sb.WriteString("  ")
-		sb.WriteString(SubtitleStyle.Render(filepath.Base(m.imagePath)))
+		subtitleParts = append(subtitleParts, filepath.Base(m.imagePath))
 	}
-	// Show current mode
-	sb.WriteString("  ")
 	modeLabel := "[" + color.ModeNames[m.extractionMode] + "]"
 	if m.lightMode {
 		modeLabel += " (light)"
 	}
-	sb.WriteString(SubtitleStyle.Render(modeLabel))
-	sb.WriteString("\n\n")
+	subtitleParts = append(subtitleParts, modeLabel)
+	subtitleText := SubtitleStyle.Render(strings.Join(subtitleParts, "  "))
 
-	// Main content - side by side
-	leftLines := strings.Split(left, "\n")
-	rightLines := strings.Split(right, "\n")
+	// Main content - side by side (same as FilePicker)
+	content := lipgloss.JoinHorizontal(lipgloss.Top, left, "  ", right)
 
-	maxLines := len(leftLines)
-	if len(rightLines) > maxLines {
-		maxLines = len(rightLines)
-	}
-
-	for i := 0; i < maxLines; i++ {
-		var leftLine, rightLine string
-		if i < len(leftLines) {
-			leftLine = leftLines[i]
-		}
-		if i < len(rightLines) {
-			rightLine = rightLines[i]
-		}
-		sb.WriteString(leftLine)
-		sb.WriteString("  ")
-		sb.WriteString(rightLine)
-		sb.WriteString("\n")
-	}
-
-	// Status bar - more prominent with icon and background
-	sb.WriteString("\n")
-	statusBarStyle := lipgloss.NewStyle().
-		Padding(0, 1).
-		MarginTop(1)
-
+	// Status bar
 	var statusContent string
+	statusBarStyle := lipgloss.NewStyle().Padding(0, 1)
+
 	if m.err != nil {
-		// Error status with red indicator
 		errorIcon := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("1")). // Red
+			Foreground(lipgloss.Color("1")).
 			Bold(true).
 			Render("● ")
-		statusContent = errorIcon + ErrorStyle.Render(m.status)
-		statusBarStyle = statusBarStyle.
+		statusContent = statusBarStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
-			BorderForeground(lipgloss.Color("1")) // Red border
+			BorderForeground(lipgloss.Color("1")).
+			Render(errorIcon + ErrorStyle.Render(m.status))
 	} else if strings.Contains(m.status, "Applied") || strings.Contains(m.status, "saved") || strings.Contains(m.status, "Loaded") {
-		// Success status with green indicator
 		successIcon := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("2")). // Green
+			Foreground(lipgloss.Color("2")).
 			Bold(true).
 			Render("✓ ")
-		statusContent = successIcon + SuccessStyle.Render(m.status)
-		statusBarStyle = statusBarStyle.
+		statusContent = statusBarStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
-			BorderForeground(lipgloss.Color("2")) // Green border
+			BorderForeground(lipgloss.Color("2")).
+			Render(successIcon + SuccessStyle.Render(m.status))
 	} else if strings.Contains(m.status, "extracted") || strings.Contains(m.status, "Ready") {
-		// Info status with cyan indicator
 		infoIcon := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("6")). // Cyan
+			Foreground(lipgloss.Color("6")).
 			Bold(true).
 			Render("● ")
-		statusContent = infoIcon + lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(m.status)
-		statusBarStyle = statusBarStyle.
+		statusContent = statusBarStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
-			BorderForeground(lipgloss.Color("6")) // Cyan border
+			BorderForeground(lipgloss.Color("6")).
+			Render(infoIcon + lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(m.status))
 	} else {
-		// Default status
-		statusContent = StatusStyle.Render(m.status)
+		statusContent = statusBarStyle.Render(StatusStyle.Render(m.status))
 	}
-	sb.WriteString(statusBarStyle.Render(statusContent))
-	sb.WriteString("\n")
 
 	// Help bar
-	sb.WriteString(m.renderHelpBar())
+	helpBar := m.renderHelpBar()
 
-	return sb.String()
+	// Compose everything vertically using lipgloss
+	return lipgloss.JoinVertical(lipgloss.Left,
+		"",
+		headerTitle,
+		subtitleText,
+		"",
+		content,
+		"",
+		statusContent,
+		helpBar,
+	)
 }
 
 func (m Model) renderHelpBar() string {

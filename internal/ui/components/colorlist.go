@@ -190,8 +190,8 @@ func (c ColorList) View() string {
 	borderStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("8")). // Bright Black
-		Width(c.width).
-		Height(c.height)
+		Padding(1).
+		Width(c.width)
 
 	if c.focused {
 		borderStyle = borderStyle.BorderForeground(lipgloss.Color("5")) // Magenta

@@ -166,18 +166,25 @@ func hexToRgba(hex string, alpha string) string {
 }
 
 // GenerateThemeFiles processes embedded templates and generates theme files
-func GenerateThemeFiles(p *color.Palette, referenceFiles []string) error {
+func GenerateThemeFiles(p *color.Palette, referenceFiles []string, wallpaperPath string) error {
 	outputDir := GetPeachyThemeDir()
 
 	// Ensure output directory exists
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create theme directory: %w", err)
 	}
 
 	// Create backgrounds subdirectory
 	bgDir := filepath.Join(outputDir, "backgrounds")
-	if err := os.MkdirAll(bgDir, 0755); err != nil {
+	if err := os.MkdirAll(bgDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create backgrounds directory: %w", err)
+	}
+
+	// Copy wallpaper to backgrounds folder if provided
+	if wallpaperPath != "" {
+		if err := copyWallpaper(wallpaperPath, bgDir); err != nil {
+			return fmt.Errorf("failed to copy wallpaper: %w", err)
+		}
 	}
 
 	variables := BuildTemplateVariables(p)
@@ -225,6 +232,26 @@ func GenerateThemeFiles(p *color.Palette, referenceFiles []string) error {
 	return nil
 }
 
+// copyWallpaper copies the wallpaper file to the backgrounds directory
+func copyWallpaper(src, destDir string) error {
+	// Read source file
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("failed to read wallpaper: %w", err)
+	}
+
+	// Get filename from source path
+	filename := filepath.Base(src)
+	destPath := filepath.Join(destDir, filename)
+
+	// Write to destination
+	if err := os.WriteFile(destPath, data, 0o644); err != nil {
+		return fmt.Errorf("failed to write wallpaper: %w", err)
+	}
+
+	return nil
+}
+
 // CreateOmarchySymlink creates symlink from omarchy themes to peachy theme
 func CreateOmarchySymlink() error {
 	if !IsOmarchyInstalled() {
@@ -236,7 +263,7 @@ func CreateOmarchySymlink() error {
 
 	// Ensure parent directory exists
 	parentDir := filepath.Dir(omarchyThemeDir)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if err := os.MkdirAll(parentDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create omarchy themes directory: %w", err)
 	}
 
@@ -302,9 +329,9 @@ func RunOmarchyThemeSet() error {
 }
 
 // ApplyThemeToSystem generates theme files, creates symlinks, and applies the theme
-func ApplyThemeToSystem(p *color.Palette) error {
+func ApplyThemeToSystem(p *color.Palette, wallpaperPath string) error {
 	// Generate all embedded template files
-	if err := GenerateThemeFiles(p, nil); err != nil {
+	if err := GenerateThemeFiles(p, nil, wallpaperPath); err != nil {
 		return fmt.Errorf("failed to generate theme files: %w", err)
 	}
 

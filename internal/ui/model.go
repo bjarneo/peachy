@@ -436,7 +436,7 @@ func (m Model) applySelectedTheme() (tea.Model, tea.Cmd) {
 	}
 
 	// Generate theme files and apply to system (omarchy integration)
-	if err := config.ApplyThemeToSystem(palette); err != nil {
+	if err := config.ApplyThemeToSystem(palette, m.imagePath); err != nil {
 		m.err = err
 		m.status = "Error applying to system: " + err.Error()
 		m.viewState = ViewMain
@@ -458,7 +458,7 @@ func (m Model) applySelectedTheme() (tea.Model, tea.Cmd) {
 
 func (m Model) applyCurrentPalette() (tea.Model, tea.Cmd) {
 	// Generate theme files and apply to system (omarchy integration)
-	if err := config.ApplyThemeToSystem(m.palette); err != nil {
+	if err := config.ApplyThemeToSystem(m.palette, m.imagePath); err != nil {
 		m.err = err
 		m.status = "Error applying to system: " + err.Error()
 		return m, nil

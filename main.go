@@ -98,7 +98,8 @@ func main() {
 		}
 
 		// Generate theme files and apply to system (omarchy integration)
-		if err := config.ApplyThemeToSystem(palette); err != nil {
+		// No wallpaper path when applying from CLI
+		if err := config.ApplyThemeToSystem(palette, ""); err != nil {
 			fmt.Fprintf(os.Stderr, "Error applying to system: %v\n", err)
 			os.Exit(1)
 		}

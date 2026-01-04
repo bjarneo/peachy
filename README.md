@@ -124,6 +124,7 @@ That's it. Press `o` to open the file picker, select an image, and watch the mag
 | `e` | Re-extract colors from image |
 | `s` | Save theme (prompts for name) |
 | `l` | Browse and load themes |
+| `a` | Apply current palette to system |
 | `r` | Reset to extracted colors |
 | `m` | Cycle extraction mode |
 | `M` | Cycle extraction mode (reverse) |
@@ -230,10 +231,25 @@ peachy --apply mytheme
 | Path | Description |
 |------|-------------|
 | `~/.config/peachy/themes/` | Directory containing saved themes |
-| `~/.config/peachy/theme` | File containing the active theme name |
-| `~/.config/peachy/colors.toml` | Active theme colors (generated on apply) |
+| `~/.config/peachy/current` | File containing the active theme name |
+| `~/.config/peachy/generated/` | Generated config files (ghostty, kitty, etc.) |
 
-This makes it easy to integrate with other tools — just read `~/.config/peachy/theme` to get the active theme name, or use `colors.toml` directly.
+This makes it easy to integrate with other tools — just read `~/.config/peachy/current` to get the active theme name, or use the generated configs in the `generated/` directory.
+
+## Omarchy Integration
+
+On [Omarchy](https://omarchy.app) systems, Peachy provides seamless integration:
+
+- **Template Processing**: Generates configs for ghostty, kitty, alacritty, hyprland, waybar, wofi, btop, neovim, and more
+- **Automatic Symlink**: Creates `~/.config/omarchy/themes/peachy` → `~/.config/peachy/generated/`
+- **System Apply**: Runs `omarchy-theme-set peachy` to apply the theme system-wide
+
+When you press `a` (apply) in the theme browser or use `--apply`, Peachy will:
+1. Generate all config files from embedded templates
+2. Create the omarchy symlink
+3. Run `omarchy-theme-set` to activate the theme
+
+On non-Omarchy systems, themes are still saved and can be manually copied to your app configs.
 
 ## Configuration
 
@@ -243,7 +259,8 @@ This makes it easy to integrate with other tools — just read `~/.config/peachy
 |------|-------------|
 | `~/.config/peachy/colors.toml` | Default config file |
 | `~/.config/peachy/themes/` | Saved named themes |
-| `~/.config/peachy/theme` | Active theme name |
+| `~/.config/peachy/current` | Active theme name |
+| `~/.config/peachy/generated/` | Generated config files |
 | `~/.cache/peachy/thumbnails/` | Cached image thumbnails |
 | `~/Wallpapers/` | Default wallpaper directory |
 

@@ -97,13 +97,17 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Save colors.toml
-		if err := config.SaveConfig(config.GetDefaultConfigPath(), palette); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving colors.toml: %v\n", err)
+		// Generate theme files and apply to system (omarchy integration)
+		if err := config.ApplyThemeToSystem(palette); err != nil {
+			fmt.Fprintf(os.Stderr, "Error applying to system: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("Applied theme '%s'\n", applyTheme)
+		if config.IsOmarchyInstalled() {
+			fmt.Printf("Applied theme '%s' to system\n", applyTheme)
+		} else {
+			fmt.Printf("Applied theme '%s'\n", applyTheme)
+		}
 		return
 	}
 

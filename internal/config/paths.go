@@ -6,10 +6,11 @@ import (
 )
 
 const (
-	AppName    = "peachy"
-	ConfigFile = "colors.toml"
-	ThemesDir  = "themes"
-	ThemeFile  = "theme"
+	AppName       = "peachy"
+	ConfigFile    = "colors.toml"
+	ThemesDir     = "themes"
+	ThemeFile     = "current"      // File containing active theme name
+	GeneratedDir  = "generated"    // Directory for generated config files
 )
 
 // GetConfigDir returns the configuration directory path

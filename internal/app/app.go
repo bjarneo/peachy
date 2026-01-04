@@ -96,6 +96,7 @@ Keyboard Shortcuts:
   t             Toggle light/dark mode
   s             Save theme (prompts for name)
   l             Browse and load themes
+  a             Apply current palette to system
   r             Reset to extracted colors
   ?             Show help
   q             Quit
@@ -124,7 +125,14 @@ Color Editor:
 
 Theme Storage:
   Themes are saved to: ~/.config/peachy/themes/<name>.toml
-  Active theme file:   ~/.config/peachy/theme
+  Active theme file:   ~/.config/peachy/current
+  Generated configs:   ~/.config/peachy/generated/
+
+Omarchy Integration:
+  On Omarchy systems, applying a theme will:
+  - Generate config files from embedded templates
+  - Symlink to ~/.config/omarchy/themes/peachy
+  - Run omarchy-theme-set to apply system-wide
 
 Requirements:
   - ImageMagick (for color extraction)

@@ -236,6 +236,9 @@ func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.extractColors()
 		}
 		return m, nil
+	case "a":
+		// Apply current palette to system
+		return m.applyCurrentPalette()
 	case "enter":
 		// Open color editor
 		m.colorEditor.Open(m.colorList.SelectedColor(), m.colorList.Cursor())
@@ -431,10 +434,10 @@ func (m Model) applySelectedTheme() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Also save as colors.toml
-	if err := config.SaveConfig(config.GetDefaultConfigPath(), palette); err != nil {
+	// Generate theme files and apply to system (omarchy integration)
+	if err := config.ApplyThemeToSystem(palette); err != nil {
 		m.err = err
-		m.status = "Error saving colors.toml: " + err.Error()
+		m.status = "Error applying to system: " + err.Error()
 		m.viewState = ViewMain
 		return m, nil
 	}
@@ -442,8 +445,29 @@ func (m Model) applySelectedTheme() (tea.Model, tea.Cmd) {
 	m.palette = palette
 	m.colorList.SetPalette(m.palette)
 	m.preview.SetPalette(m.palette)
-	m.status = "Applied theme '" + themeName + "'"
+
+	if config.IsOmarchyInstalled() {
+		m.status = "Applied theme '" + themeName + "' to system"
+	} else {
+		m.status = "Applied theme '" + themeName + "'"
+	}
 	m.viewState = ViewMain
+	return m, nil
+}
+
+func (m Model) applyCurrentPalette() (tea.Model, tea.Cmd) {
+	// Generate theme files and apply to system (omarchy integration)
+	if err := config.ApplyThemeToSystem(m.palette); err != nil {
+		m.err = err
+		m.status = "Error applying to system: " + err.Error()
+		return m, nil
+	}
+
+	if config.IsOmarchyInstalled() {
+		m.status = "Applied theme to system"
+	} else {
+		m.status = "Generated theme files to " + config.GetPeachyThemeDir()
+	}
 	return m, nil
 }
 
@@ -679,6 +703,7 @@ func (m Model) renderHelpBar() string {
 		addKey("t", "light/dark")
 		addKey("s", "save")
 		addKey("l", "themes")
+		addKey("a", "apply")
 		addKey("?", "help")
 		addKey("q", "quit")
 	}

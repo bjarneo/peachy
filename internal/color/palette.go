@@ -49,7 +49,7 @@ var RoleNames = map[ColorRole]string{
 // HueRanges defines the hue ranges for each color category
 // Hue is in degrees (0-360)
 var HueRanges = map[ColorRole][2]float64{
-	RoleRed:     {345, 15},  // Wraps around 0
+	RoleRed:     {345, 15}, // Wraps around 0
 	RoleYellow:  {45, 75},
 	RoleGreen:   {75, 165},
 	RoleCyan:    {165, 195},
@@ -167,12 +167,12 @@ func AssignColorsToRoles(colors []Color) *Palette {
 		normal int
 		bright int
 	}{
-		{1, 9},   // red
-		{2, 10},  // green
-		{3, 11},  // yellow
-		{4, 12},  // blue
-		{5, 13},  // magenta
-		{6, 14},  // cyan
+		{1, 9},  // red
+		{2, 10}, // green
+		{3, 11}, // yellow
+		{4, 12}, // blue
+		{5, 13}, // magenta
+		{6, 14}, // cyan
 	}
 
 	for _, assignment := range hueAssignments {

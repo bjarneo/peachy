@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"peachy/internal/color"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"peachy/internal/color"
 )
 
 // EditorField represents which field is being edited
@@ -21,15 +22,15 @@ const (
 
 // ColorEditor allows editing a single color via HSL or hex
 type ColorEditor struct {
-	original     color.Color
-	current      color.Color
-	colorIndex   int
-	activeField  EditorField
-	hexInput     string
-	hexMode      bool
-	width        int
-	height       int
-	visible      bool
+	original    color.Color
+	current     color.Color
+	colorIndex  int
+	activeField EditorField
+	hexInput    string
+	hexMode     bool
+	width       int
+	height      int
+	visible     bool
 }
 
 // NewColorEditor creates a new color editor
@@ -296,8 +297,8 @@ func (e ColorEditor) renderSlider(value, max float64, active bool) string {
 	}
 
 	// Using ANSI colors
-	track := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))  // Bright Black
-	fill := lipgloss.NewStyle().Foreground(lipgloss.Color("5"))   // Magenta
+	track := lipgloss.NewStyle().Foreground(lipgloss.Color("8")) // Bright Black
+	fill := lipgloss.NewStyle().Foreground(lipgloss.Color("5"))  // Magenta
 	if active {
 		fill = lipgloss.NewStyle().Foreground(lipgloss.Color("13")) // Bright Magenta
 	}

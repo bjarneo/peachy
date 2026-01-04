@@ -20,10 +20,10 @@ const (
 
 // ThumbnailCache manages cached thumbnail images for faster preview
 type ThumbnailCache struct {
-	cacheDir    string
+	cacheDir     string
 	wallpaperDir string
-	thumbnails  map[string]string // original path -> thumbnail path
-	mu          sync.RWMutex
+	thumbnails   map[string]string // original path -> thumbnail path
+	mu           sync.RWMutex
 }
 
 // NewThumbnailCache creates a new thumbnail cache
@@ -50,12 +50,12 @@ func (c *ThumbnailCache) GetWallpaperDir() string {
 // EnsureDirectories creates the wallpaper and cache directories if they don't exist
 func (c *ThumbnailCache) EnsureDirectories() error {
 	// Create wallpaper directory
-	if err := os.MkdirAll(c.wallpaperDir, 0755); err != nil {
+	if err := os.MkdirAll(c.wallpaperDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create wallpaper directory: %w", err)
 	}
 
 	// Create cache directory
-	if err := os.MkdirAll(c.cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(c.cacheDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -95,7 +95,7 @@ func (c *ThumbnailCache) ScanAndCache() error {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			c.GetOrCreateThumbnail(path)
+			_, _ = c.GetOrCreateThumbnail(path)
 		}(imagePath)
 	}
 
@@ -201,7 +201,7 @@ func (c *ThumbnailCache) ClearCache() error {
 
 	c.thumbnails = make(map[string]string)
 
-	return os.MkdirAll(c.cacheDir, 0755)
+	return os.MkdirAll(c.cacheDir, 0o755)
 }
 
 // generateCacheKey creates a unique key for the cache based on path and mtime
@@ -234,7 +234,7 @@ func (c *ThumbnailCache) GetCacheStats() (count int, size int64) {
 	count = len(c.thumbnails)
 	c.mu.RUnlock()
 
-	filepath.Walk(c.cacheDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(c.cacheDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}

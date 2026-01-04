@@ -6,17 +6,17 @@ import (
 
 // KeyMap defines all key bindings
 type KeyMap struct {
-	Up          key.Binding
-	Down        key.Binding
-	Enter       key.Binding
-	Escape      key.Binding
-	Open        key.Binding
-	Extract     key.Binding
-	Save        key.Binding
-	Load        key.Binding
-	Reset       key.Binding
-	Help        key.Binding
-	Quit        key.Binding
+	Up      key.Binding
+	Down    key.Binding
+	Enter   key.Binding
+	Escape  key.Binding
+	Open    key.Binding
+	Extract key.Binding
+	Save    key.Binding
+	Load    key.Binding
+	Reset   key.Binding
+	Help    key.Binding
+	Quit    key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings

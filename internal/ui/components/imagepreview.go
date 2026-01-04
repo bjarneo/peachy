@@ -5,20 +5,21 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"peachy/internal/terminal"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 // ImagePreview displays an image preview using Unicode blocks
 type ImagePreview struct {
-	imagePath    string
-	rendered     string
-	width        int
-	height       int
-	err          error
-	showInfo     bool
-	imgWidth     int
-	imgHeight    int
+	imagePath string
+	rendered  string
+	width     int
+	height    int
+	err       error
+	showInfo  bool
+	imgWidth  int
+	imgHeight int
 }
 
 // NewImagePreview creates a new image preview component

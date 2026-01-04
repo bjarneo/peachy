@@ -149,7 +149,7 @@ func hexToRgbString(hex string) string {
 	}
 
 	var r, g, b int
-	fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+	_, _ = fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
 	return fmt.Sprintf("%d,%d,%d", r, g, b)
 }
 
@@ -161,7 +161,7 @@ func hexToRgba(hex string, alpha string) string {
 	}
 
 	var r, g, b int
-	fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+	_, _ = fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
 	return fmt.Sprintf("rgba(%d,%d,%d,%s)", r, g, b, alpha)
 }
 
@@ -243,9 +243,9 @@ func CreateOmarchySymlink() error {
 	// Remove existing symlink or directory
 	if info, err := os.Lstat(omarchyThemeDir); err == nil {
 		if info.Mode()&os.ModeSymlink != 0 {
-			os.Remove(omarchyThemeDir)
+			_ = os.Remove(omarchyThemeDir)
 		} else if info.IsDir() {
-			os.RemoveAll(omarchyThemeDir)
+			_ = os.RemoveAll(omarchyThemeDir)
 		}
 	}
 
@@ -288,7 +288,7 @@ func RunOmarchyThemeSet() error {
 	if err != nil {
 		return fmt.Errorf("failed to create log file: %w", err)
 	}
-	defer logFile.Close()
+	defer func() { _ = logFile.Close() }()
 
 	cmd := exec.Command("omarchy-theme-set", OmarchyThemeName)
 	cmd.Stdout = logFile

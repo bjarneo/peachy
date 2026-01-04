@@ -4,11 +4,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"peachy/internal/cache"
 	"peachy/internal/color"
 	"peachy/internal/config"
 	"peachy/internal/ui/components"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // CacheScanCompleteMsg is sent when thumbnail cache scanning is complete
@@ -70,8 +71,8 @@ type Model struct {
 	themeNameInput string
 
 	// Theme browser
-	themes       []string
-	themeCursor  int
+	themes      []string
+	themeCursor int
 }
 
 // NewModel creates a new application model
@@ -80,7 +81,7 @@ func NewModel() Model {
 	thumbCache := cache.NewThumbnailCache()
 
 	// Ensure directories exist
-	thumbCache.EnsureDirectories()
+	_ = thumbCache.EnsureDirectories()
 
 	// Create file picker with thumbnail cache
 	filePicker := components.NewFilePicker()

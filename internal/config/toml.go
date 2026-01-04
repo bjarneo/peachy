@@ -5,8 +5,9 @@ import (
 	"os"
 	"strings"
 
-	toml "github.com/pelletier/go-toml/v2"
 	"peachy/internal/color"
+
+	toml "github.com/pelletier/go-toml/v2"
 )
 
 // ColorsConfig represents the colors.toml file structure

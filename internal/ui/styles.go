@@ -30,18 +30,18 @@ var (
 
 // Semantic color mappings using ANSI colors
 var (
-	ColorPrimary   = ANSIMagenta      // Main accent color
-	ColorSecondary = ANSIBrightBlue   // Secondary accent
+	ColorPrimary   = ANSIMagenta       // Main accent color
+	ColorSecondary = ANSIBrightBlue    // Secondary accent
 	ColorAccent    = ANSIBrightMagenta // Highlights
-	ColorMuted     = ANSIBrightBlack  // Comments/muted text
-	ColorBorder    = ANSIBrightBlack  // Borders
-	ColorBg        = ANSIBlack        // Background
-	ColorFg        = ANSIWhite        // Foreground
-	ColorSelected  = ANSIBlue         // Selected items
-	ColorError     = ANSIRed          // Error messages
-	ColorSuccess   = ANSIGreen        // Success messages
-	ColorWarning   = ANSIYellow       // Warnings
-	ColorInfo      = ANSICyan         // Info messages
+	ColorMuted     = ANSIBrightBlack   // Comments/muted text
+	ColorBorder    = ANSIBrightBlack   // Borders
+	ColorBg        = ANSIBlack         // Background
+	ColorFg        = ANSIWhite         // Foreground
+	ColorSelected  = ANSIBlue          // Selected items
+	ColorError     = ANSIRed           // Error messages
+	ColorSuccess   = ANSIGreen         // Success messages
+	ColorWarning   = ANSIYellow        // Warnings
+	ColorInfo      = ANSICyan          // Info messages
 )
 
 // Styles for various UI elements

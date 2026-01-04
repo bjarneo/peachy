@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"strings"
 
+	"peachy/internal/color"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"peachy/internal/color"
 )
 
 // ColorList displays and allows navigation of the 16-color palette
 type ColorList struct {
-	palette  *color.Palette
-	cursor   int
-	width    int
-	height   int
-	focused  bool
+	palette *color.Palette
+	cursor  int
+	width   int
+	height  int
+	focused bool
 }
 
 // NewColorList creates a new color list component

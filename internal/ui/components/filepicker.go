@@ -6,11 +6,12 @@ import (
 	"sort"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"peachy/internal/cache"
 	"peachy/internal/color"
 	"peachy/internal/terminal"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // FileEntry represents a file or directory
@@ -41,8 +42,8 @@ type FilePicker struct {
 	thumbnailCache *cache.ThumbnailCache
 
 	// Search mode
-	searchMode   bool
-	searchQuery  string
+	searchMode  bool
+	searchQuery string
 }
 
 // NewFilePicker creates a new file picker with ~/Wallpapers as default
@@ -50,7 +51,7 @@ func NewFilePicker() FilePicker {
 	thumbCache := cache.NewThumbnailCache()
 
 	// Ensure wallpaper directory exists
-	thumbCache.EnsureDirectories()
+	_ = thumbCache.EnsureDirectories()
 
 	fp := FilePicker{
 		currentDir:     thumbCache.GetWallpaperDir(),
@@ -558,7 +559,7 @@ func (f FilePicker) renderFileList() string {
 		}
 
 		// Highlight matching part if searching
-		displayName := name
+		var displayName string
 		if f.searchQuery != "" {
 			displayName = highlightMatch(name, f.searchQuery, style, matchStyle)
 		} else {

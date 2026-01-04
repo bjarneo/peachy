@@ -4,10 +4,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"peachy/internal/cache"
 	"peachy/internal/color"
 	"peachy/internal/terminal"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Preview displays a preview of the palette and optionally the source image

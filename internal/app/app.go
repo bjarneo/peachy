@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"peachy/internal/ui"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // App represents the Peachy application
@@ -135,8 +136,7 @@ Omarchy Integration:
   - Run omarchy-theme-set to apply system-wide
 
 Requirements:
-  - ImageMagick (for color extraction)
-`)
+  - ImageMagick (for color extraction)`)
 }
 
 // CheckDependencies verifies required dependencies are installed

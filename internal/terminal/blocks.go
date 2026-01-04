@@ -26,10 +26,10 @@ var (
 // Unicode block characters for image rendering
 // Each character represents 2 vertical pixels
 const (
-	BlockFull       = '█' // Full block - both pixels same color
-	BlockUpperHalf  = '▀' // Upper half - top pixel colored, bottom is background
-	BlockLowerHalf  = '▄' // Lower half - bottom pixel colored, top is background
-	BlockEmpty      = ' ' // Empty - both pixels are background
+	BlockFull      = '█' // Full block - both pixels same color
+	BlockUpperHalf = '▀' // Upper half - top pixel colored, bottom is background
+	BlockLowerHalf = '▄' // Lower half - bottom pixel colored, top is background
+	BlockEmpty     = ' ' // Empty - both pixels are background
 )
 
 // RenderOptions configures image rendering
@@ -108,7 +108,7 @@ func loadImage(path string) (image.Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open image: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
@@ -168,9 +168,6 @@ func RenderImageFit(imagePath string, maxWidth, maxHeight int) (string, error) {
 	// Remember: each character is 2 pixels tall
 	charAspect := 2.0 // Characters are roughly twice as tall as wide
 
-	targetWidth := maxWidth
-	targetHeight := maxHeight
-
 	// Calculate scaling to maintain aspect ratio
 	scaleW := float64(maxWidth) / float64(imgWidth)
 	scaleH := float64(maxHeight*2) / float64(imgHeight) // *2 because each char = 2 pixels
@@ -180,8 +177,8 @@ func RenderImageFit(imagePath string, maxWidth, maxHeight int) (string, error) {
 		scale = scaleH
 	}
 
-	targetWidth = int(float64(imgWidth) * scale)
-	targetHeight = int(float64(imgHeight) * scale / charAspect)
+	targetWidth := int(float64(imgWidth) * scale)
+	targetHeight := int(float64(imgHeight) * scale / charAspect)
 
 	if targetWidth < 1 {
 		targetWidth = 1
@@ -225,7 +222,7 @@ func GetImageDimensions(imagePath string) (width, height int, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	config, _, err := image.DecodeConfig(file)
 	if err != nil {

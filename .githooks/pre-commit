@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Format code
+echo "  Formatting code..."
+go fmt ./...
+
+# Run go vet
+echo "  Running go vet..."
+go vet ./...
+
+# Run golangci-lint if available
+if command -v golangci-lint &> /dev/null; then
+    echo "  Running golangci-lint..."
+    golangci-lint run --fix
+fi
+
+# Build to ensure no compile errors
+echo "  Building..."
+go build -o /dev/null .
+
+# Add any formatted files back to staging
+git add -u
+
+echo "Pre-commit checks passed!"

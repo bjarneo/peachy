@@ -94,12 +94,17 @@ Keyboard Shortcuts:
   m             Cycle extraction mode
   M             Cycle extraction mode (reverse)
   t             Toggle light/dark mode
-  s             Save colors.toml
-  S             Save as named theme (to ~/.config/peachy/themes/)
-  l             Load colors.toml
+  s             Save theme (prompts for name)
+  l             Browse and load themes
   r             Reset to extracted colors
   ?             Show help
   q             Quit
+
+Theme Browser:
+  j/k           Navigate themes
+  Enter         Load theme (populate colors in TUI)
+  a             Apply theme (save to ~/.config/peachy/theme)
+  Esc           Cancel
 
 Extraction Modes:
   normal        Auto-detect image type (default)

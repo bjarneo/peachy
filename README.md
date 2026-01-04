@@ -122,15 +122,23 @@ That's it. Press `o` to open the file picker, select an image, and watch the mag
 | `Enter` | Edit selected color |
 | `o` | Open file picker |
 | `e` | Re-extract colors from image |
-| `s` | Save to colors.toml |
-| `S` | Save as named theme |
-| `l` | Load from colors.toml |
+| `s` | Save theme (prompts for name) |
+| `l` | Browse and load themes |
 | `r` | Reset to extracted colors |
 | `m` | Cycle extraction mode |
 | `M` | Cycle extraction mode (reverse) |
 | `t` | Toggle light/dark mode |
 | `?` | Show help |
 | `q` | Quit |
+
+#### Theme Browser
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Navigate themes |
+| `Enter` | Load theme (populate colors) |
+| `a` | Apply theme (save as active) |
+| `Esc` | Cancel |
 
 #### File Picker
 
@@ -191,21 +199,30 @@ Peachy supports saving and managing multiple named themes, making it easy to swi
 
 ### Saving Themes
 
-Press `S` in the TUI to save your current palette as a named theme. Themes are stored in:
+Press `s` in the TUI to save your current palette as a named theme. You'll be prompted to enter a name. Themes are stored in:
 
 ```
 ~/.config/peachy/themes/<name>.toml
 ```
 
+### Browsing Themes
+
+Press `l` to open the theme browser. From there you can:
+
+- **Navigate** with `j/k` or arrow keys
+- **Load** a theme with `Enter` — this populates the colors in the TUI for editing
+- **Apply** a theme with `a` — this saves it as the active theme and writes `colors.toml`
+
 ### Applying Themes
 
-Use the `--apply` flag to set a theme as active:
+You can also apply a theme from the command line:
 
 ```bash
 # Apply a saved theme
 peachy --apply mytheme
 
 # This creates ~/.config/peachy/theme containing the theme name
+# and saves the theme colors to ~/.config/peachy/colors.toml
 ```
 
 ### Theme Files
@@ -214,8 +231,9 @@ peachy --apply mytheme
 |------|-------------|
 | `~/.config/peachy/themes/` | Directory containing saved themes |
 | `~/.config/peachy/theme` | File containing the active theme name |
+| `~/.config/peachy/colors.toml` | Active theme colors (generated on apply) |
 
-This makes it easy to integrate with other tools — just read `~/.config/peachy/theme` to get the active theme name, then load the corresponding `.toml` from the themes directory.
+This makes it easy to integrate with other tools — just read `~/.config/peachy/theme` to get the active theme name, or use `colors.toml` directly.
 
 ## Configuration
 

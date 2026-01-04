@@ -25,6 +25,8 @@ const (
 	ViewEditor
 	ViewFilePicker
 	ViewHelp
+	ViewSaveTheme
+	ViewThemeBrowser
 )
 
 // Model is the main application model
@@ -63,6 +65,13 @@ type Model struct {
 	// Flags
 	quitting     bool
 	cacheScanned bool
+
+	// Theme name input
+	themeNameInput string
+
+	// Theme browser
+	themes       []string
+	themeCursor  int
 }
 
 // NewModel creates a new application model
@@ -153,6 +162,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateFilePicker(msg)
 		case ViewEditor:
 			return m.updateEditor(msg)
+		case ViewSaveTheme:
+			return m.updateSaveTheme(msg)
+		case ViewThemeBrowser:
+			return m.updateThemeBrowser(msg)
 		default:
 			return m.updateMain(msg)
 		}
@@ -177,9 +190,13 @@ func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "e":
 		return m.extractColors()
 	case "s":
-		return m.saveConfig()
+		// Open save theme dialog
+		m.themeNameInput = ""
+		m.viewState = ViewSaveTheme
+		return m, nil
 	case "l":
-		return m.loadConfig()
+		// Open theme browser
+		return m.openThemeBrowser()
 	case "r":
 		if m.originalPalette != nil {
 			m.palette = m.originalPalette.Clone()
@@ -291,6 +308,145 @@ func (m Model) updateHelp(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) updateSaveTheme(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.viewState = ViewMain
+		m.themeNameInput = ""
+		return m, nil
+	case "enter":
+		if m.themeNameInput != "" {
+			return m.saveTheme()
+		}
+		return m, nil
+	case "backspace":
+		if len(m.themeNameInput) > 0 {
+			m.themeNameInput = m.themeNameInput[:len(m.themeNameInput)-1]
+		}
+		return m, nil
+	default:
+		// Add character to input (only allow valid filename chars)
+		key := msg.String()
+		if len(key) == 1 && isValidThemeChar(key[0]) {
+			m.themeNameInput += key
+		}
+		return m, nil
+	}
+}
+
+func isValidThemeChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') ||
+		c == '-' || c == '_'
+}
+
+func (m Model) openThemeBrowser() (tea.Model, tea.Cmd) {
+	themes, err := config.ListThemes()
+	if err != nil {
+		m.err = err
+		m.status = "Error listing themes: " + err.Error()
+		return m, nil
+	}
+
+	if len(themes) == 0 {
+		m.status = "No themes found. Press 's' to save a theme first."
+		return m, nil
+	}
+
+	m.themes = themes
+	m.themeCursor = 0
+	m.viewState = ViewThemeBrowser
+	return m, nil
+}
+
+func (m Model) updateThemeBrowser(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "q":
+		m.viewState = ViewMain
+		return m, nil
+	case "j", "down":
+		if m.themeCursor < len(m.themes)-1 {
+			m.themeCursor++
+		}
+		return m, nil
+	case "k", "up":
+		if m.themeCursor > 0 {
+			m.themeCursor--
+		}
+		return m, nil
+	case "enter":
+		// Load the selected theme
+		return m.loadSelectedTheme()
+	case "a":
+		// Apply the selected theme
+		return m.applySelectedTheme()
+	}
+	return m, nil
+}
+
+func (m Model) loadSelectedTheme() (tea.Model, tea.Cmd) {
+	if len(m.themes) == 0 {
+		return m, nil
+	}
+
+	themeName := m.themes[m.themeCursor]
+	palette, err := config.LoadTheme(themeName)
+	if err != nil {
+		m.err = err
+		m.status = "Error loading theme: " + err.Error()
+		m.viewState = ViewMain
+		return m, nil
+	}
+
+	m.palette = palette
+	m.colorList.SetPalette(m.palette)
+	m.preview.SetPalette(m.palette)
+	m.status = "Loaded theme '" + themeName + "'"
+	m.viewState = ViewMain
+	return m, nil
+}
+
+func (m Model) applySelectedTheme() (tea.Model, tea.Cmd) {
+	if len(m.themes) == 0 {
+		return m, nil
+	}
+
+	themeName := m.themes[m.themeCursor]
+
+	// Load the theme first
+	palette, err := config.LoadTheme(themeName)
+	if err != nil {
+		m.err = err
+		m.status = "Error loading theme: " + err.Error()
+		m.viewState = ViewMain
+		return m, nil
+	}
+
+	// Apply the theme (write to ~/.config/peachy/theme)
+	if err := config.ApplyTheme(themeName); err != nil {
+		m.err = err
+		m.status = "Error applying theme: " + err.Error()
+		m.viewState = ViewMain
+		return m, nil
+	}
+
+	// Also save as colors.toml
+	if err := config.SaveConfig(config.GetDefaultConfigPath(), palette); err != nil {
+		m.err = err
+		m.status = "Error saving colors.toml: " + err.Error()
+		m.viewState = ViewMain
+		return m, nil
+	}
+
+	m.palette = palette
+	m.colorList.SetPalette(m.palette)
+	m.preview.SetPalette(m.palette)
+	m.status = "Applied theme '" + themeName + "'"
+	m.viewState = ViewMain
+	return m, nil
+}
+
 func (m Model) extractColors() (tea.Model, tea.Cmd) {
 	if m.imagePath == "" {
 		m.status = "No image selected. Press 'o' to open an image."
@@ -319,42 +475,20 @@ func (m Model) extractColors() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) saveConfig() (tea.Model, tea.Cmd) {
-	path := m.configPath
-	if path == "" {
-		path = config.GetDefaultConfigPath()
-	}
+func (m Model) saveTheme() (tea.Model, tea.Cmd) {
+	name := m.themeNameInput
 
-	if err := config.SaveConfig(path, m.palette); err != nil {
+	if err := config.SaveTheme(name, m.palette); err != nil {
 		m.err = err
-		m.status = "Error saving: " + err.Error()
+		m.status = "Error saving theme: " + err.Error()
+		m.viewState = ViewMain
 		return m, nil
 	}
 
-	m.status = "Saved to " + path
+	m.status = "Theme '" + name + "' saved to " + config.GetThemePath(name)
 	m.err = nil
-	return m, nil
-}
-
-func (m Model) loadConfig() (tea.Model, tea.Cmd) {
-	path := m.configPath
-	if path == "" {
-		path = config.GetDefaultConfigPath()
-	}
-
-	palette, err := config.LoadConfig(path)
-	if err != nil {
-		m.err = err
-		m.status = "Error loading: " + err.Error()
-		return m, nil
-	}
-
-	m.palette = palette
-	m.colorList.SetPalette(m.palette)
-	m.preview.SetPalette(m.palette)
-
-	m.status = "Loaded from " + path
-	m.err = nil
+	m.themeNameInput = ""
+	m.viewState = ViewMain
 	return m, nil
 }
 
@@ -405,6 +539,12 @@ func (m Model) View() string {
 		sb.WriteString(m.filePicker.View())
 	case ViewEditor:
 		sb.WriteString(m.renderMainWithEditor())
+	case ViewSaveTheme:
+		sb.WriteString(m.renderMain())
+		sb.WriteString("\n")
+		sb.WriteString(m.renderSaveThemeDialog())
+	case ViewThemeBrowser:
+		sb.WriteString(m.renderThemeBrowser())
 	default:
 		sb.WriteString(m.renderMain())
 	}
@@ -418,6 +558,45 @@ func (m Model) renderMain() string {
 
 func (m Model) renderMainWithEditor() string {
 	return m.renderLayout(m.colorEditor.View(), m.preview.View())
+}
+
+func (m Model) renderSaveThemeDialog() string {
+	var sb strings.Builder
+	sb.WriteString("\n")
+	sb.WriteString(HeaderStyle.Render("Save Theme"))
+	sb.WriteString("\n\n")
+	sb.WriteString("Theme name: ")
+	sb.WriteString(m.themeNameInput)
+	sb.WriteString("█")
+	sb.WriteString("\n\n")
+	sb.WriteString(HelpDescStyle.Render("Enter: save  Esc: cancel"))
+	return sb.String()
+}
+
+func (m Model) renderThemeBrowser() string {
+	var sb strings.Builder
+
+	sb.WriteString(HeaderStyle.Render("Peachy - Theme Browser"))
+	sb.WriteString("\n\n")
+
+	if len(m.themes) == 0 {
+		sb.WriteString("No themes found.\n")
+	} else {
+		for i, theme := range m.themes {
+			if i == m.themeCursor {
+				sb.WriteString("> ")
+				sb.WriteString(HeaderStyle.Render(theme))
+			} else {
+				sb.WriteString("  ")
+				sb.WriteString(theme)
+			}
+			sb.WriteString("\n")
+		}
+	}
+
+	sb.WriteString("\n")
+	sb.WriteString(HelpDescStyle.Render("j/k: navigate  Enter: load  a: apply  Esc: cancel"))
+	return sb.String()
 }
 
 func (m Model) renderLayout(left, right string) string {
@@ -499,6 +678,7 @@ func (m Model) renderHelpBar() string {
 		addKey("m", "mode")
 		addKey("t", "light/dark")
 		addKey("s", "save")
+		addKey("l", "themes")
 		addKey("?", "help")
 		addKey("q", "quit")
 	}

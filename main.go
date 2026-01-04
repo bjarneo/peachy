@@ -84,10 +84,25 @@ func main() {
 
 	// Handle apply theme
 	if applyTheme != "" {
+		// Load the theme first
+		palette, err := config.LoadTheme(applyTheme)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading theme: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Apply the theme (write name to ~/.config/peachy/theme)
 		if err := config.ApplyTheme(applyTheme); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
+
+		// Save colors.toml
+		if err := config.SaveConfig(config.GetDefaultConfigPath(), palette); err != nil {
+			fmt.Fprintf(os.Stderr, "Error saving colors.toml: %v\n", err)
+			os.Exit(1)
+		}
+
 		fmt.Printf("Applied theme '%s'\n", applyTheme)
 		return
 	}

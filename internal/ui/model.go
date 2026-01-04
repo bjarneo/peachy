@@ -10,6 +10,7 @@ import (
 	"peachy/internal/ui/components"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // CacheScanCompleteMsg is sent when thumbnail cache scanning is complete
@@ -665,13 +666,51 @@ func (m Model) renderLayout(left, right string) string {
 		sb.WriteString("\n")
 	}
 
-	// Status bar
+	// Status bar - more prominent with icon and background
 	sb.WriteString("\n")
+	statusBarStyle := lipgloss.NewStyle().
+		Padding(0, 1).
+		MarginTop(1)
+
+	var statusContent string
 	if m.err != nil {
-		sb.WriteString(ErrorStyle.Render(m.status))
+		// Error status with red indicator
+		errorIcon := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("1")). // Red
+			Bold(true).
+			Render("● ")
+		statusContent = errorIcon + ErrorStyle.Render(m.status)
+		statusBarStyle = statusBarStyle.
+			BorderLeft(true).
+			BorderStyle(lipgloss.ThickBorder()).
+			BorderForeground(lipgloss.Color("1")) // Red border
+	} else if strings.Contains(m.status, "Applied") || strings.Contains(m.status, "saved") || strings.Contains(m.status, "Loaded") {
+		// Success status with green indicator
+		successIcon := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("2")). // Green
+			Bold(true).
+			Render("✓ ")
+		statusContent = successIcon + SuccessStyle.Render(m.status)
+		statusBarStyle = statusBarStyle.
+			BorderLeft(true).
+			BorderStyle(lipgloss.ThickBorder()).
+			BorderForeground(lipgloss.Color("2")) // Green border
+	} else if strings.Contains(m.status, "extracted") || strings.Contains(m.status, "Ready") {
+		// Info status with cyan indicator
+		infoIcon := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("6")). // Cyan
+			Bold(true).
+			Render("● ")
+		statusContent = infoIcon + lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(m.status)
+		statusBarStyle = statusBarStyle.
+			BorderLeft(true).
+			BorderStyle(lipgloss.ThickBorder()).
+			BorderForeground(lipgloss.Color("6")) // Cyan border
 	} else {
-		sb.WriteString(StatusStyle.Render(m.status))
+		// Default status
+		statusContent = StatusStyle.Render(m.status)
 	}
+	sb.WriteString(statusBarStyle.Render(statusContent))
 	sb.WriteString("\n")
 
 	// Help bar
@@ -681,33 +720,40 @@ func (m Model) renderLayout(left, right string) string {
 }
 
 func (m Model) renderHelpBar() string {
-	var parts []string
+	var groups []string
 
-	addKey := func(key, desc string) {
-		parts = append(parts, HelpKeyStyle.Render(key)+HelpDescStyle.Render(":"+desc))
+	addKey := func(key, desc string) string {
+		return HelpKeyStyle.Render(key) + HelpDescStyle.Render(":"+desc)
 	}
+
+	separator := HelpDescStyle.Render(" │ ")
 
 	switch m.viewState {
 	case ViewEditor:
-		addKey("h/l", "adjust")
-		addKey("j/k", "field")
-		addKey("#", "hex")
-		addKey("u", "reset")
-		addKey("Enter", "confirm")
-		addKey("Esc", "cancel")
+		// Group: Adjust values
+		adjustGroup := []string{addKey("h/l", "adjust"), addKey("j/k", "field"), addKey("#", "hex")}
+		groups = append(groups, strings.Join(adjustGroup, " "))
+
+		// Group: Actions
+		actionGroup := []string{addKey("u", "reset"), addKey("Enter", "confirm"), addKey("Esc", "cancel")}
+		groups = append(groups, strings.Join(actionGroup, " "))
 	default:
-		addKey("j/k", "nav")
-		addKey("Enter", "edit")
-		addKey("o", "open")
-		addKey("e", "extract")
-		addKey("m", "mode")
-		addKey("t", "light/dark")
-		addKey("s", "save")
-		addKey("l", "themes")
-		addKey("a", "apply")
-		addKey("?", "help")
-		addKey("q", "quit")
+		// Group: Navigation
+		navGroup := []string{addKey("j/k", "nav"), addKey("Enter", "edit")}
+		groups = append(groups, strings.Join(navGroup, " "))
+
+		// Group: Files & Colors
+		fileGroup := []string{addKey("o", "open"), addKey("e", "extract"), addKey("m", "mode"), addKey("t", "light/dark")}
+		groups = append(groups, strings.Join(fileGroup, " "))
+
+		// Group: Themes
+		themeGroup := []string{addKey("s", "save"), addKey("l", "themes"), addKey("a", "apply")}
+		groups = append(groups, strings.Join(themeGroup, " "))
+
+		// Group: App
+		appGroup := []string{addKey("?", "help"), addKey("q", "quit")}
+		groups = append(groups, strings.Join(appGroup, " "))
 	}
 
-	return HelpBarStyle.Render(strings.Join(parts, "  "))
+	return HelpBarStyle.Render(strings.Join(groups, separator))
 }

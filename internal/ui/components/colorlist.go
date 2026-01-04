@@ -129,8 +129,24 @@ func (c ColorList) View() string {
 	sb.WriteString(strings.Repeat("─", c.width-4))
 	sb.WriteString("\n")
 
+	// Section header style
+	sectionStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8")). // Bright Black (muted)
+		Italic(true)
+
+	// Normal colors section
+	sb.WriteString(sectionStyle.Render("Normal"))
+	sb.WriteString("\n")
+
 	// Color list
 	for i := 0; i < 16; i++ {
+		// Add divider between normal and bright colors
+		if i == 8 {
+			sb.WriteString("\n")
+			sb.WriteString(sectionStyle.Render("Bright"))
+			sb.WriteString("\n")
+		}
+
 		col := c.palette.GetColor(i)
 		roleName := c.palette.GetRoleName(i)
 
@@ -146,16 +162,22 @@ func (c ColorList) View() string {
 		// Style based on selection - using ANSI colors
 		var line string
 		if i == c.cursor && c.focused {
-			line = fmt.Sprintf("> %s %s %s  %s", indexStr, swatch, hexStr, roleName)
+			// More visually distinct selection with arrow and highlight
+			indicator := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("13")). // Bright Magenta
+				Bold(true).
+				Render("▶ ")
+			line = fmt.Sprintf("%s%s %s %s  %s", indicator, indexStr, swatch, hexStr, roleName)
 			line = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("15")). // Bright White
 				Background(lipgloss.Color("4")).  // Blue
+				Bold(true).
 				Width(c.width - 4).
 				Render(line)
 		} else {
 			prefix := "  "
 			if i == c.cursor {
-				prefix = "> "
+				prefix = "▶ "
 			}
 			line = fmt.Sprintf("%s%s %s %s  %s", prefix, indexStr, swatch, hexStr, roleName)
 		}

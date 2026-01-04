@@ -211,9 +211,29 @@ func hexToYaruIconTheme(hex string) string {
 	}
 }
 
+// cleanGeneratedDir removes all contents from the generated directory
+func cleanGeneratedDir(dir string) error {
+	// Check if directory exists
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return nil // Nothing to clean
+	}
+
+	// Remove the entire directory and its contents
+	if err := os.RemoveAll(dir); err != nil {
+		return fmt.Errorf("failed to remove directory: %w", err)
+	}
+
+	return nil
+}
+
 // GenerateThemeFiles processes embedded templates and generates theme files
 func GenerateThemeFiles(p *color.Palette, referenceFiles []string, wallpaperPath string) error {
 	outputDir := GetPeachyThemeDir()
+
+	// Clean the output directory before generating new files
+	if err := cleanGeneratedDir(outputDir); err != nil {
+		return fmt.Errorf("failed to clean generated directory: %w", err)
+	}
 
 	// Ensure output directory exists
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {

@@ -228,7 +228,7 @@ func FindBestColorMatch(targetHue float64, colors []Color, usedIndices map[int]b
 			continue
 		}
 
-		score := calculateColorScore(c, targetHue)
+		score := calculateHueMatchScore(c, targetHue)
 		if score < bestScore {
 			bestScore = score
 			bestIndex = i
@@ -248,9 +248,9 @@ func FindBestColorMatch(targetHue float64, colors []Color, usedIndices map[int]b
 	return bestIndex
 }
 
-// calculateColorScore calculates how well a color matches a target hue
+// calculateHueMatchScore calculates how well a color matches a target hue
 // Lower score is better (matches Aether's implementation)
-func calculateColorScore(c Color, targetHue float64) float64 {
+func calculateHueMatchScore(c Color, targetHue float64) float64 {
 	// Hue difference is primary factor - multiply by 3 to prioritize it
 	hueDiff := CalculateHueDistance(c.HSL.H, targetHue) * 3
 

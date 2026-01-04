@@ -664,7 +664,7 @@ func (f FilePicker) renderPreview() string {
 					Foreground(lipgloss.Color("8")).
 					Render("Size: ") + lipgloss.NewStyle().
 					Foreground(lipgloss.Color("7")).
-					Render(strings.TrimSpace(strings.Join([]string{itoa(w), "x", itoa(h)}, "")))))
+					Render(strings.TrimSpace(strings.Join([]string{intToString(w), "x", intToString(h)}, "")))))
 				sb.WriteString("\n\n")
 			}
 		}
@@ -694,8 +694,8 @@ func (f FilePicker) renderPreview() string {
 	return borderStyle.Render(sb.String())
 }
 
-// Simple int to string without importing strconv
-func itoa(i int) string {
+// intToString converts an integer to string without importing strconv
+func intToString(i int) string {
 	if i == 0 {
 		return "0"
 	}

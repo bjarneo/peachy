@@ -122,7 +122,7 @@ func ProcessTemplateContent(content string, variables map[string]string) string 
 
 		// Replace {key.rgb} (converts hex to decimal RGB: r,g,b)
 		if strings.HasPrefix(value, "#") {
-			rgbValue := hexToRgbString(value)
+			rgbValue := hexToDecimalRGB(value)
 			result = strings.ReplaceAll(result, "{"+key+".rgb}", rgbValue)
 		}
 
@@ -134,12 +134,12 @@ func ProcessTemplateContent(content string, variables map[string]string) string 
 			if len(alphaMatch) > 1 && alphaMatch[1] != "" {
 				alpha = alphaMatch[1]
 			}
-			return hexToRgba(value, alpha)
+			return hexToRgbaString(value, alpha)
 		})
 
 		// Replace {key.yaru} (maps color to Yaru icon theme variant)
 		if strings.HasPrefix(value, "#") {
-			yaruValue := hexToYaruTheme(value)
+			yaruValue := hexToYaruIconTheme(value)
 			result = strings.ReplaceAll(result, "{"+key+".yaru}", yaruValue)
 		}
 	}
@@ -147,8 +147,8 @@ func ProcessTemplateContent(content string, variables map[string]string) string 
 	return result
 }
 
-// hexToRgbString converts #RRGGBB to "R,G,B"
-func hexToRgbString(hex string) string {
+// hexToDecimalRGB converts #RRGGBB to "R,G,B" decimal format
+func hexToDecimalRGB(hex string) string {
 	hex = strings.TrimPrefix(hex, "#")
 	if len(hex) != 6 {
 		return hex
@@ -159,8 +159,8 @@ func hexToRgbString(hex string) string {
 	return fmt.Sprintf("%d,%d,%d", r, g, b)
 }
 
-// hexToRgba converts #RRGGBB to "rgba(R,G,B,A)"
-func hexToRgba(hex string, alpha string) string {
+// hexToRgbaString converts #RRGGBB to "rgba(R,G,B,A)" CSS format
+func hexToRgbaString(hex string, alpha string) string {
 	hex = strings.TrimPrefix(hex, "#")
 	if len(hex) != 6 {
 		return hex
@@ -171,8 +171,8 @@ func hexToRgba(hex string, alpha string) string {
 	return fmt.Sprintf("rgba(%d,%d,%d,%s)", r, g, b, alpha)
 }
 
-// hexToYaruTheme maps a hex color to a Yaru icon theme variant based on hue
-func hexToYaruTheme(hex string) string {
+// hexToYaruIconTheme maps a hex color to a Yaru icon theme variant based on hue
+func hexToYaruIconTheme(hex string) string {
 	hex = strings.TrimPrefix(hex, "#")
 	if len(hex) != 6 {
 		return "Yaru"

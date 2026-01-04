@@ -147,9 +147,9 @@ func HSLToRGB(hsl HSL) RGB {
 			q = l + s - l*s
 		}
 		p := 2*l - q
-		r = hueToRGB(p, q, h+1.0/3.0)
-		g = hueToRGB(p, q, h)
-		b = hueToRGB(p, q, h-1.0/3.0)
+		r = hueToRGBComponent(p, q, h+1.0/3.0)
+		g = hueToRGBComponent(p, q, h)
+		b = hueToRGBComponent(p, q, h-1.0/3.0)
 	}
 
 	return RGB{
@@ -159,7 +159,8 @@ func HSLToRGB(hsl HSL) RGB {
 	}
 }
 
-func hueToRGB(p, q, t float64) float64 {
+// hueToRGBComponent is a helper function for HSL to RGB conversion
+func hueToRGBComponent(p, q, t float64) float64 {
 	if t < 0 {
 		t += 1
 	}

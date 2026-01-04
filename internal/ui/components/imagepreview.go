@@ -107,10 +107,10 @@ func (p ImagePreview) HasImage() bool {
 func (p ImagePreview) View() string {
 	var sb strings.Builder
 
-	// Title
+	// Title - using ANSI colors
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#A78BFA")).
+		Foreground(lipgloss.Color("13")). // Bright Magenta
 		MarginBottom(1)
 	sb.WriteString(titleStyle.Render("IMAGE PREVIEW"))
 	sb.WriteString("\n")
@@ -118,7 +118,7 @@ func (p ImagePreview) View() string {
 	if p.imagePath == "" {
 		// No image
 		emptyStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#6B7280")).
+			Foreground(lipgloss.Color("8")). // Bright Black
 			Italic(true)
 		sb.WriteString("\n")
 		sb.WriteString(emptyStyle.Render("No image selected"))
@@ -127,14 +127,14 @@ func (p ImagePreview) View() string {
 	} else if p.err != nil {
 		// Error
 		errorStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#EF4444"))
+			Foreground(lipgloss.Color("1")) // Red
 		sb.WriteString("\n")
 		sb.WriteString(errorStyle.Render("Error: " + p.err.Error()))
 	} else {
 		// Show image info
 		if p.showInfo {
 			infoStyle := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#6B7280"))
+				Foreground(lipgloss.Color("8")) // Bright Black
 			filename := filepath.Base(p.imagePath)
 			if len(filename) > p.width-5 {
 				filename = filename[:p.width-8] + "..."
@@ -147,10 +147,10 @@ func (p ImagePreview) View() string {
 		sb.WriteString(p.rendered)
 	}
 
-	// Border
+	// Border - using ANSI colors
 	borderStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#374151")).
+		BorderForeground(lipgloss.Color("8")). // Bright Black
 		Width(p.width + 4).
 		Height(p.height + 4)
 

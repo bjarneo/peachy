@@ -335,66 +335,9 @@ peachy -c ~/.config/peachy/colors.toml
 peachy --apply nord
 ```
 
-## How It Works
-
-### Color Extraction
-
-Peachy uses ImageMagick to extract dominant colors:
-
-```bash
-convert image.png -resize 100x100 -colors 16 -unique-colors txt:-
-```
-
-Colors are then intelligently assigned to ANSI roles based on:
-- **Luminance** — Darkest colors → black/background, lightest → white/foreground
-- **Hue** — Colors are grouped by hue ranges (red, yellow, green, cyan, blue, magenta)
-- **Saturation** — More saturated colors are preferred for the primary slots
-
-### Thumbnail Caching
-
-For fast image previews, Peachy generates 200x200 thumbnails:
-
-```
-~/Wallpapers/sunset.png (4K, 12MB)
-        ↓
-~/.cache/peachy/thumbnails/a1b2c3d4.png (200x200, 20KB)
-        ↓
-Terminal Preview (Unicode blocks)
-```
-
-Thumbnails are keyed by `MD5(path + mtime)` and automatically regenerate when source files change.
-
-### Terminal Image Rendering
-
-Images are rendered using Unicode half-block characters (`▀`):
-
-- Each character = 2 vertical pixels
-- Foreground color = top pixel
-- Background color = bottom pixel
-- Works in any terminal with true color (24-bit) support
-
-## Built With
-
-- [Bubble Tea](https://github.com/charmbracelet/bubbletea) - TUI framework
-- [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Styling
-- [Bubbles](https://github.com/charmbracelet/bubbles) - TUI components
-- [go-toml](https://github.com/pelletier/go-toml) - TOML parsing
-- [imaging](https://github.com/disintegration/imaging) - Image processing
-
 ## Related Projects
 
 - [Aether](https://github.com/bjarneo/aether) - GTK theme creator (Peachy's big sibling)
-- [pywal](https://github.com/dylanaraps/pywal) - Generate color schemes from images
-
-## Contributing
-
-Contributions are welcome! Feel free to:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## License
 

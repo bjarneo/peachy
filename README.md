@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">🍑 Peachy</h1>
+  <h1 align="center">Peachy</h1>
   <p align="center">
     <strong>A delightful TUI for creating terminal color themes from images</strong>
   </p>

@@ -16,6 +16,7 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m' # No Color
 
 # Configuration
@@ -173,59 +174,162 @@ download_template() {
     $success
 }
 
+# Interactive checkbox selector
 select_templates_interactive() {
     local platform=$(detect_platform)
-    local selected=()
-
-    echo -e "${BOLD}Available templates:${NC}"
-    echo ""
-
-    local i=1
     local template_list=()
+    local selected=()
+    local cursor=0
 
+    # Build list of relevant templates
     for template in $(echo "${!TEMPLATES[@]}" | tr ' ' '\n' | sort); do
-        # Skip templates not relevant for this platform
-        if ! is_relevant_for_platform "$template"; then
-            continue
+        if is_relevant_for_platform "$template"; then
+            template_list+=("$template")
+            selected+=(0)  # 0 = not selected
         fi
-
-        template_list+=("$template")
-        local desc="${TEMPLATES[$template]}"
-        local status=""
-
-        if is_installed "$template"; then
-            status="${GREEN}[installed]${NC}"
-        fi
-
-        printf "  ${CYAN}%2d${NC}) %-12s %s %s\n" "$i" "$template" "$desc" "$status"
-        ((i++))
     done
 
-    echo ""
-    echo -e "  ${CYAN} a${NC}) Install all"
-    echo -e "  ${CYAN} q${NC}) Quit"
-    echo ""
+    local total=${#template_list[@]}
 
-    echo -e "${BOLD}Enter template numbers (space-separated), 'a' for all, or 'q' to quit:${NC}"
-    read -r -p "> " input
+    # Hide cursor
+    tput civis 2>/dev/null >/dev/tty || true
 
-    if [[ "$input" == "q" || "$input" == "Q" ]]; then
-        echo ""
-        print_info "Installation cancelled."
-        exit 0
-    fi
+    # Cleanup on exit
+    cleanup() {
+        tput cnorm 2>/dev/null >/dev/tty || true
+        stty echo 2>/dev/null || true
+    }
+    trap cleanup EXIT
 
-    if [[ "$input" == "a" || "$input" == "A" ]]; then
-        selected=("${template_list[@]}")
-    else
-        for num in $input; do
-            if [[ "$num" =~ ^[0-9]+$ ]] && (( num >= 1 && num <= ${#template_list[@]} )); then
-                selected+=("${template_list[$((num-1))]}")
+    # Draw the menu (output to /dev/tty so it shows on screen)
+    draw_menu() {
+        # Move cursor up to redraw (only after first draw)
+        if [[ $1 == "redraw" ]]; then
+            tput cuu $((total + 5)) >/dev/tty 2>/dev/null || true
+        fi
+
+        echo -e "${BOLD}Select templates to install:${NC}" >/dev/tty
+        echo -e "${DIM}Use ↑/↓ or j/k to move, Space to toggle, Enter to confirm, a to select all${NC}" >/dev/tty
+        echo "" >/dev/tty
+
+        for i in "${!template_list[@]}"; do
+            local template="${template_list[$i]}"
+            local desc="${TEMPLATES[$template]}"
+            local checkbox
+            local line_prefix="  "
+            local line_suffix=""
+
+            if [[ ${selected[$i]} -eq 1 ]]; then
+                checkbox="${GREEN}[✓]${NC}"
+            else
+                checkbox="[ ]"
+            fi
+
+            if is_installed "$template"; then
+                line_suffix=" ${DIM}(installed)${NC}"
+            fi
+
+            if [[ $i -eq $cursor ]]; then
+                echo -e "${CYAN}▸${NC} $checkbox ${BOLD}$template${NC} - $desc$line_suffix" >/dev/tty
+            else
+                echo -e "  $checkbox $template - $desc$line_suffix" >/dev/tty
             fi
         done
-    fi
 
-    echo "${selected[@]}"
+        echo "" >/dev/tty
+        local count=0
+        for s in "${selected[@]}"; do
+            ((count += s))
+        done
+        echo -e "${DIM}$count template(s) selected${NC}" >/dev/tty
+    }
+
+    # Initial draw
+    draw_menu
+
+    # Read keys from /dev/tty
+    while true; do
+        # Read a single character
+        IFS= read -rsn1 key </dev/tty
+
+        # Handle escape sequences (arrow keys)
+        if [[ $key == $'\x1b' ]]; then
+            read -rsn2 -t 0.1 key2 </dev/tty
+            key+="$key2"
+        fi
+
+        case "$key" in
+            # Up arrow or k
+            $'\x1b[A'|k)
+                if [[ $cursor -gt 0 ]]; then
+                    ((cursor--))
+                fi
+                draw_menu redraw
+                ;;
+            # Down arrow or j
+            $'\x1b[B'|j)
+                if [[ $cursor -lt $((total - 1)) ]]; then
+                    ((cursor++))
+                fi
+                draw_menu redraw
+                ;;
+            # Space - toggle selection
+            ' ')
+                if [[ ${selected[$cursor]} -eq 1 ]]; then
+                    selected[$cursor]=0
+                else
+                    selected[$cursor]=1
+                fi
+                draw_menu redraw
+                ;;
+            # Enter - confirm
+            '')
+                break
+                ;;
+            # 'a' - select all
+            a)
+                local all_selected=1
+                for s in "${selected[@]}"; do
+                    if [[ $s -eq 0 ]]; then
+                        all_selected=0
+                        break
+                    fi
+                done
+                if [[ $all_selected -eq 1 ]]; then
+                    # Deselect all
+                    for i in "${!selected[@]}"; do
+                        selected[$i]=0
+                    done
+                else
+                    # Select all
+                    for i in "${!selected[@]}"; do
+                        selected[$i]=1
+                    done
+                fi
+                draw_menu redraw
+                ;;
+            # 'q' - quit
+            q)
+                echo "" >/dev/tty
+                print_info "Installation cancelled." >/dev/tty
+                exit 0
+                ;;
+        esac
+    done
+
+    # Show cursor again
+    tput cnorm 2>/dev/null >/dev/tty || true
+    echo "" >/dev/tty
+
+    # Return selected templates to stdout (this is what gets captured)
+    local result=()
+    for i in "${!template_list[@]}"; do
+        if [[ ${selected[$i]} -eq 1 ]]; then
+            result+=("${template_list[$i]}")
+        fi
+    done
+
+    echo "${result[@]}"
 }
 
 install_templates() {
@@ -382,7 +486,7 @@ main() {
         done
         install_templates "${all_templates[@]}"
     else
-        # Interactive mode
+        # Interactive mode with checkboxes
         IFS=' ' read -r -a selected <<< "$(select_templates_interactive)"
         install_templates "${selected[@]}"
     fi

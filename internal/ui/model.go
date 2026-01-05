@@ -7,8 +7,10 @@ import (
 	"peachy/internal/cache"
 	"peachy/internal/color"
 	"peachy/internal/config"
+	"peachy/internal/shared"
 	"peachy/internal/ui/components"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -46,8 +48,7 @@ type Model struct {
 	imagePath       string
 	configPath      string
 	viewState       ViewState
-	status          string
-	err             error
+	status          shared.Status
 
 	// Extraction mode
 	extractionMode color.ExtractionMode
@@ -105,7 +106,7 @@ func NewModel() Model {
 		lightMode:      false,
 		keys:           DefaultKeyMap(),
 		viewState:      ViewMain,
-		status:         "Scanning wallpapers...",
+		status:         shared.Info("Scanning wallpapers..."),
 	}
 }
 
@@ -135,11 +136,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case CacheScanCompleteMsg:
 		m.cacheScanned = true
 		if msg.Err != nil {
-			m.status = "Cache scan failed: " + msg.Err.Error()
+			m.status = shared.Error("Cache scan failed: " + msg.Err.Error())
 		} else if msg.Count > 0 {
-			m.status = "Ready. Press 'o' to open ~/Wallpapers"
+			m.status = shared.Info("Ready. Press 'o' to open ~/Wallpapers")
 		} else {
-			m.status = "Press 'o' to open an image, 'l' to load colors.toml"
+			m.status = shared.Info("Press 'o' to open an image, 'l' to load colors.toml")
 		}
 		return m, nil
 
@@ -177,77 +178,66 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "q":
+	switch {
+	case key.Matches(msg, m.keys.Quit):
 		m.quitting = true
 		return m, tea.Quit
-	case "?":
+	case key.Matches(msg, m.keys.Help):
 		m.help.Show()
 		m.viewState = ViewHelp
 		return m, nil
-	case "o":
+	case key.Matches(msg, m.keys.Open):
 		m.filePicker.Open()
 		m.viewState = ViewFilePicker
 		return m, nil
-	case "e":
+	case key.Matches(msg, m.keys.Extract):
 		return m.extractColors()
-	case "s":
-		// Open save theme dialog
+	case key.Matches(msg, m.keys.Save):
 		m.themeNameInput = ""
 		m.viewState = ViewSaveTheme
 		return m, nil
-	case "l":
-		// Open theme browser
+	case key.Matches(msg, m.keys.Load):
 		return m.openThemeBrowser()
-	case "r":
+	case key.Matches(msg, m.keys.Reset):
 		if m.originalPalette != nil {
 			m.palette = m.originalPalette.Clone()
 			m.colorList.SetPalette(m.palette)
 			m.preview.SetPalette(m.palette)
-			m.status = "Reset to extracted colors"
+			m.status = shared.Info("Reset to extracted colors")
 		}
 		return m, nil
-	case "m":
-		// Cycle extraction mode
+	case msg.String() == "m":
 		m.extractionMode = color.NextMode(m.extractionMode)
-		m.status = "Mode: " + color.ModeNames[m.extractionMode]
-		// Re-extract if image is loaded
+		m.status = shared.Info("Mode: " + color.ModeNames[m.extractionMode])
 		if m.imagePath != "" {
 			return m.extractColors()
 		}
 		return m, nil
-	case "M":
-		// Cycle extraction mode backwards
+	case msg.String() == "M":
 		m.extractionMode = color.PrevMode(m.extractionMode)
-		m.status = "Mode: " + color.ModeNames[m.extractionMode]
-		// Re-extract if image is loaded
+		m.status = shared.Info("Mode: " + color.ModeNames[m.extractionMode])
 		if m.imagePath != "" {
 			return m.extractColors()
 		}
 		return m, nil
-	case "t":
-		// Toggle light/dark mode
+	case msg.String() == "t":
 		m.lightMode = !m.lightMode
 		if m.lightMode {
-			m.status = "Light mode enabled"
+			m.status = shared.Info("Light mode enabled")
 		} else {
-			m.status = "Dark mode enabled"
+			m.status = shared.Info("Dark mode enabled")
 		}
-		// Re-extract if image is loaded
 		if m.imagePath != "" {
 			return m.extractColors()
 		}
 		return m, nil
-	case "a":
-		// Apply current palette to system
+	case msg.String() == "a":
 		return m.applyCurrentPalette()
-	case "enter":
-		// Open color editor
+	case key.Matches(msg, m.keys.Enter):
 		m.colorEditor.Open(m.colorList.SelectedColor(), m.colorList.Cursor())
 		m.viewState = ViewEditor
 		return m, nil
 	default:
-		// Pass to color list
 		var cmd tea.Cmd
 		m.colorList, cmd = m.colorList.Update(msg)
 		return m, cmd
@@ -255,27 +245,25 @@ func (m Model) updateMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateEditor(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
+	switch {
+	case key.Matches(msg, m.keys.Escape):
 		m.colorEditor.Close()
 		m.viewState = ViewMain
 		return m, nil
-	case "enter":
+	case key.Matches(msg, m.keys.Enter):
 		if !m.colorEditor.Visible() {
 			return m, nil
 		}
-		// Apply the edited color
 		m.palette.SetColor(m.colorEditor.ColorIndex(), m.colorEditor.CurrentColor())
 		m.colorList.SetPalette(m.palette)
 		m.preview.SetPalette(m.palette)
 		m.colorEditor.Close()
 		m.viewState = ViewMain
-		m.status = "Color updated"
+		m.status = shared.Success("Color updated")
 		return m, nil
 	default:
 		var cmd tea.Cmd
 		m.colorEditor, cmd = m.colorEditor.Update(msg)
-		// Live preview update
 		m.palette.SetColor(m.colorEditor.ColorIndex(), m.colorEditor.CurrentColor())
 		m.preview.SetPalette(m.palette)
 		return m, cmd
@@ -283,8 +271,8 @@ func (m Model) updateEditor(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateFilePicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
+	switch {
+	case key.Matches(msg, m.keys.Escape):
 		m.filePicker.Close()
 		m.viewState = ViewMain
 		return m, nil
@@ -292,7 +280,6 @@ func (m Model) updateFilePicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.filePicker, cmd = m.filePicker.Update(msg)
 
-		// Check if a file was selected
 		if selected := m.filePicker.Selected(); selected != "" {
 			m.imagePath = selected
 			m.viewState = ViewMain
@@ -304,8 +291,8 @@ func (m Model) updateFilePicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateHelp(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "?", "q":
+	switch {
+	case key.Matches(msg, m.keys.Escape), key.Matches(msg, m.keys.Help), key.Matches(msg, m.keys.Quit):
 		m.help.Hide()
 		m.viewState = ViewMain
 		return m, nil
@@ -349,13 +336,12 @@ func isValidThemeChar(c byte) bool {
 func (m Model) openThemeBrowser() (tea.Model, tea.Cmd) {
 	themes, err := config.ListThemes()
 	if err != nil {
-		m.err = err
-		m.status = "Error listing themes: " + err.Error()
+		m.status = shared.Error("Error listing themes: " + err.Error())
 		return m, nil
 	}
 
 	if len(themes) == 0 {
-		m.status = "No themes found. Press 's' to save a theme first."
+		m.status = shared.Info("No themes found. Press 's' to save a theme first.")
 		return m, nil
 	}
 
@@ -398,8 +384,7 @@ func (m Model) loadSelectedTheme() (tea.Model, tea.Cmd) {
 	themeName := m.themes[m.themeCursor]
 	palette, err := config.LoadTheme(themeName)
 	if err != nil {
-		m.err = err
-		m.status = "Error loading theme: " + err.Error()
+		m.status = shared.Error("Error loading theme: " + err.Error())
 		m.viewState = ViewMain
 		return m, nil
 	}
@@ -407,7 +392,7 @@ func (m Model) loadSelectedTheme() (tea.Model, tea.Cmd) {
 	m.palette = palette
 	m.colorList.SetPalette(m.palette)
 	m.preview.SetPalette(m.palette)
-	m.status = "Loaded theme '" + themeName + "'"
+	m.status = shared.Success("Loaded theme '" + themeName + "'")
 	m.viewState = ViewMain
 	return m, nil
 }
@@ -419,27 +404,21 @@ func (m Model) applySelectedTheme() (tea.Model, tea.Cmd) {
 
 	themeName := m.themes[m.themeCursor]
 
-	// Load the theme first
 	palette, err := config.LoadTheme(themeName)
 	if err != nil {
-		m.err = err
-		m.status = "Error loading theme: " + err.Error()
+		m.status = shared.Error("Error loading theme: " + err.Error())
 		m.viewState = ViewMain
 		return m, nil
 	}
 
-	// Apply the theme (write to ~/.config/peachy/theme)
 	if err := config.ApplyTheme(themeName); err != nil {
-		m.err = err
-		m.status = "Error applying theme: " + err.Error()
+		m.status = shared.Error("Error applying theme: " + err.Error())
 		m.viewState = ViewMain
 		return m, nil
 	}
 
-	// Generate theme files and apply to system (omarchy integration)
 	if err := config.ApplyThemeToSystem(palette, m.imagePath); err != nil {
-		m.err = err
-		m.status = "Error applying to system: " + err.Error()
+		m.status = shared.Error("Error applying to system: " + err.Error())
 		m.viewState = ViewMain
 		return m, nil
 	}
@@ -449,42 +428,39 @@ func (m Model) applySelectedTheme() (tea.Model, tea.Cmd) {
 	m.preview.SetPalette(m.palette)
 
 	if config.IsOmarchyInstalled() {
-		m.status = "Applied theme '" + themeName + "' to system"
+		m.status = shared.Success("Applied theme '" + themeName + "' to system")
 	} else {
-		m.status = "Applied theme '" + themeName + "'"
+		m.status = shared.Success("Applied theme '" + themeName + "'")
 	}
 	m.viewState = ViewMain
 	return m, nil
 }
 
 func (m Model) applyCurrentPalette() (tea.Model, tea.Cmd) {
-	// Generate theme files and apply to system (omarchy integration)
 	if err := config.ApplyThemeToSystem(m.palette, m.imagePath); err != nil {
-		m.err = err
-		m.status = "Error applying to system: " + err.Error()
+		m.status = shared.Error("Error applying to system: " + err.Error())
 		return m, nil
 	}
 
 	if config.IsOmarchyInstalled() {
-		m.status = "Applied theme to system"
+		m.status = shared.Success("Applied theme to system")
 	} else {
-		m.status = "Generated theme files to " + config.GetPeachyThemeDir()
+		m.status = shared.Success("Generated theme files to " + config.GetPeachyThemeDir())
 	}
 	return m, nil
 }
 
 func (m Model) extractColors() (tea.Model, tea.Cmd) {
 	if m.imagePath == "" {
-		m.status = "No image selected. Press 'o' to open an image."
+		m.status = shared.Info("No image selected. Press 'o' to open an image.")
 		return m, nil
 	}
 
-	m.status = "Extracting colors..."
+	m.status = shared.Info("Extracting colors...")
 
 	palette, err := m.extractor.ExtractPalette(m.imagePath, m.extractionMode, m.lightMode)
 	if err != nil {
-		m.err = err
-		m.status = "Error: " + err.Error()
+		m.status = shared.Error("Error: " + err.Error())
 		return m, nil
 	}
 
@@ -495,8 +471,7 @@ func (m Model) extractColors() (tea.Model, tea.Cmd) {
 	m.preview.SetImage(m.imagePath)
 
 	modeName := color.ModeNames[m.extractionMode]
-	m.status = "Colors extracted (" + modeName + ") from " + filepath.Base(m.imagePath)
-	m.err = nil
+	m.status = shared.Success("Colors extracted (" + modeName + ") from " + filepath.Base(m.imagePath))
 
 	return m, nil
 }
@@ -505,14 +480,12 @@ func (m Model) saveTheme() (tea.Model, tea.Cmd) {
 	name := m.themeNameInput
 
 	if err := config.SaveTheme(name, m.palette); err != nil {
-		m.err = err
-		m.status = "Error saving theme: " + err.Error()
+		m.status = shared.Error("Error saving theme: " + err.Error())
 		m.viewState = ViewMain
 		return m, nil
 	}
 
-	m.status = "Theme '" + name + "' saved to " + config.GetThemePath(name)
-	m.err = nil
+	m.status = shared.Success("Theme '" + name + "' saved to " + config.GetThemePath(name))
 	m.themeNameInput = ""
 	m.viewState = ViewMain
 	return m, nil
@@ -658,7 +631,8 @@ func (m Model) renderLayout(left, right string) string {
 	var statusContent string
 	statusBarStyle := lipgloss.NewStyle().Padding(0, 1)
 
-	if m.err != nil {
+	switch m.status.Type {
+	case shared.StatusError:
 		errorIcon := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("1")).
 			Bold(true).
@@ -667,8 +641,8 @@ func (m Model) renderLayout(left, right string) string {
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
 			BorderForeground(lipgloss.Color("1")).
-			Render(errorIcon + ErrorStyle.Render(m.status))
-	} else if strings.Contains(m.status, "Applied") || strings.Contains(m.status, "saved") || strings.Contains(m.status, "Loaded") {
+			Render(errorIcon + ErrorStyle.Render(m.status.Message))
+	case shared.StatusSuccess:
 		successIcon := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("2")).
 			Bold(true).
@@ -677,8 +651,8 @@ func (m Model) renderLayout(left, right string) string {
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
 			BorderForeground(lipgloss.Color("2")).
-			Render(successIcon + SuccessStyle.Render(m.status))
-	} else if strings.Contains(m.status, "extracted") || strings.Contains(m.status, "Ready") {
+			Render(successIcon + SuccessStyle.Render(m.status.Message))
+	case shared.StatusInfo:
 		infoIcon := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("6")).
 			Bold(true).
@@ -687,9 +661,9 @@ func (m Model) renderLayout(left, right string) string {
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
 			BorderForeground(lipgloss.Color("6")).
-			Render(infoIcon + lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(m.status))
-	} else {
-		statusContent = statusBarStyle.Render(StatusStyle.Render(m.status))
+			Render(infoIcon + lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(m.status.Message))
+	default:
+		statusContent = statusBarStyle.Render(StatusStyle.Render(m.status.Message))
 	}
 
 	// Help bar

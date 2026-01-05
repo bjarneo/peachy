@@ -5,11 +5,11 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"peachy/internal/app"
 	"peachy/internal/color"
 	"peachy/internal/config"
+	"peachy/internal/shared"
 
 	"github.com/spf13/cobra"
 )
@@ -194,7 +194,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Parse extraction mode
-	mode := parseExtractionMode(flagExtractMode)
+	mode := color.ParseMode(flagExtractMode)
 
 	// Extract colors
 	extractor := color.NewExtractor()
@@ -211,7 +211,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 
 	// Print palette preview with colors
-	printColoredPalette(palette)
+	config.PrintColoredPalette(palette)
 
 	// Save theme if requested
 	if flagSave != "" {
@@ -223,7 +223,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// Export to output directory if specified
 	if flagOutput != "" {
-		if err := exportAllFormats(palette, flagOutput); err != nil {
+		if err := config.ExportAllFormats(palette, flagOutput); err != nil {
 			return fmt.Errorf("exporting theme: %w", err)
 		}
 		fmt.Printf("Exported to %s\n", flagOutput)
@@ -299,7 +299,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading theme: %w", err)
 	}
 
-	if err := exportAllFormats(palette, outputDir); err != nil {
+	if err := config.ExportAllFormats(palette, outputDir); err != nil {
 		return err
 	}
 
@@ -334,27 +334,12 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Theme: %s\n", themeName)
 	fmt.Printf("Path:  %s\n\n", config.GetThemePath(themeName))
 
-	printColoredPalette(palette)
+	config.PrintColoredPalette(palette)
 
 	return nil
 }
 
 // Helper functions
-
-func parseExtractionMode(s string) color.ExtractionMode {
-	switch strings.ToLower(s) {
-	case "monochromatic", "mono":
-		return color.ModeMonochromatic
-	case "analogous":
-		return color.ModeAnalogous
-	case "pastel":
-		return color.ModePastel
-	case "material":
-		return color.ModeMaterial
-	default:
-		return color.ModeNormal
-	}
-}
 
 func findRandomWallpaper() (string, error) {
 	home, err := os.UserHomeDir()
@@ -375,8 +360,7 @@ func findRandomWallpaper() (string, error) {
 		if info.IsDir() {
 			return nil
 		}
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" {
+		if shared.IsValidImage(path) {
 			images = append(images, path)
 		}
 		return nil
@@ -390,73 +374,4 @@ func findRandomWallpaper() (string, error) {
 	}
 
 	return images[rand.Intn(len(images))], nil
-}
-
-func printColoredPalette(p *color.Palette) {
-	fmt.Println("\nPalette:")
-
-	// Normal colors with colored blocks
-	fmt.Print("  Normal: ")
-	for i := 0; i < 8; i++ {
-		c := p.GetColor(i)
-		fmt.Print(colorBlock(c.Hex))
-	}
-	fmt.Println()
-
-	// Bright colors with colored blocks
-	fmt.Print("  Bright: ")
-	for i := 8; i < 16; i++ {
-		c := p.GetColor(i)
-		fmt.Print(colorBlock(c.Hex))
-	}
-	fmt.Println()
-
-	// FG/BG
-	fmt.Printf("\n  FG: %s %s\n", colorBlock(p.Foreground.Hex), p.Foreground.Hex)
-	fmt.Printf("  BG: %s %s\n", colorBlock(p.Background.Hex), p.Background.Hex)
-}
-
-func colorBlock(hex string) string {
-	// Parse hex color
-	hex = strings.TrimPrefix(hex, "#")
-	var r, g, b int
-	if _, err := fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b); err != nil {
-		return "    " // Return empty block on parse error
-	}
-
-	// Return colored block using 24-bit ANSI escape
-	return fmt.Sprintf("\x1b[48;2;%d;%d;%dm    \x1b[0m", r, g, b)
-}
-
-func exportAllFormats(p *color.Palette, outputDir string) error {
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("creating output directory: %w", err)
-	}
-
-	// Get all template files
-	templateFiles, err := config.GetEmbeddedTemplateFiles()
-	if err != nil {
-		return fmt.Errorf("getting templates: %w", err)
-	}
-
-	variables := config.BuildTemplateVariables(p)
-
-	for _, filename := range templateFiles {
-		// Read template content
-		content, err := config.ReadTemplateFile(filename)
-		if err != nil {
-			return fmt.Errorf("reading template %s: %w", filename, err)
-		}
-
-		// Process template with palette variables
-		processed := config.ProcessTemplateContent(content, variables)
-
-		// Write to output directory
-		path := filepath.Join(outputDir, filename)
-		if err := os.WriteFile(path, []byte(processed), 0644); err != nil {
-			return fmt.Errorf("writing %s: %w", filename, err)
-		}
-	}
-
-	return nil
 }

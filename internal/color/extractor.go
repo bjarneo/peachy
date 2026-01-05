@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"peachy/internal/shared"
 )
 
 // Extractor handles color extraction from images using ImageMagick
@@ -149,14 +151,7 @@ func parseHistogramOutput(output string) ([]Color, error) {
 }
 
 // IsValidImage checks if the file is a valid image format
+// This is a convenience wrapper around shared.IsValidImage for package compatibility
 func IsValidImage(path string) bool {
-	lower := strings.ToLower(path)
-	validExtensions := []string{".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff"}
-
-	for _, ext := range validExtensions {
-		if strings.HasSuffix(lower, ext) {
-			return true
-		}
-	}
-	return false
+	return shared.IsValidImage(path)
 }

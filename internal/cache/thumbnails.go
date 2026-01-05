@@ -7,15 +7,11 @@ import (
 	"image"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
-	"github.com/disintegration/imaging"
-)
+	"peachy/internal/shared"
 
-const (
-	ThumbnailSize = 200 // Max dimension for thumbnails
-	CacheDir      = "thumbnails"
+	"github.com/disintegration/imaging"
 )
 
 // ThumbnailCache manages cached thumbnail images for faster preview
@@ -23,7 +19,10 @@ type ThumbnailCache struct {
 	cacheDir     string
 	wallpaperDir string
 	thumbnails   map[string]string // original path -> thumbnail path
+	accessOrder  []string          // LRU tracking for cache eviction
 	mu           sync.RWMutex
+	errors       []error // Collected errors from concurrent operations
+	errMu        sync.Mutex
 }
 
 // NewThumbnailCache creates a new thumbnail cache
@@ -36,9 +35,11 @@ func NewThumbnailCache() *ThumbnailCache {
 	}
 
 	return &ThumbnailCache{
-		cacheDir:     filepath.Join(cacheBase, "peachy", CacheDir),
+		cacheDir:     filepath.Join(cacheBase, "peachy", shared.CacheDir),
 		wallpaperDir: filepath.Join(home, "Wallpapers"),
 		thumbnails:   make(map[string]string),
+		accessOrder:  make([]string, 0),
+		errors:       make([]error, 0),
 	}
 }
 
@@ -68,6 +69,11 @@ func (c *ThumbnailCache) ScanAndCache() error {
 		return err
 	}
 
+	// Clear previous errors
+	c.errMu.Lock()
+	c.errors = make([]error, 0)
+	c.errMu.Unlock()
+
 	// Get list of image files
 	entries, err := os.ReadDir(c.wallpaperDir)
 	if err != nil {
@@ -75,7 +81,7 @@ func (c *ThumbnailCache) ScanAndCache() error {
 	}
 
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 4) // Limit concurrent thumbnail generation
+	sem := make(chan struct{}, shared.ConcurrentLimit)
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -83,7 +89,7 @@ func (c *ThumbnailCache) ScanAndCache() error {
 		}
 
 		name := entry.Name()
-		if !isValidImage(name) {
+		if !shared.IsValidImage(name) {
 			continue
 		}
 
@@ -95,12 +101,40 @@ func (c *ThumbnailCache) ScanAndCache() error {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			_, _ = c.GetOrCreateThumbnail(path)
+			if _, err := c.GetOrCreateThumbnail(path); err != nil {
+				c.collectError(err)
+			}
 		}(imagePath)
 	}
 
 	wg.Wait()
+	return c.firstError()
+}
+
+// collectError safely adds an error to the error collection
+func (c *ThumbnailCache) collectError(err error) {
+	c.errMu.Lock()
+	defer c.errMu.Unlock()
+	c.errors = append(c.errors, err)
+}
+
+// firstError returns the first collected error, if any
+func (c *ThumbnailCache) firstError() error {
+	c.errMu.Lock()
+	defer c.errMu.Unlock()
+	if len(c.errors) > 0 {
+		return c.errors[0]
+	}
 	return nil
+}
+
+// Errors returns all collected errors from concurrent operations
+func (c *ThumbnailCache) Errors() []error {
+	c.errMu.Lock()
+	defer c.errMu.Unlock()
+	result := make([]error, len(c.errors))
+	copy(result, c.errors)
+	return result
 }
 
 // GetOrCreateThumbnail returns the thumbnail path, creating it if needed
@@ -111,6 +145,7 @@ func (c *ThumbnailCache) GetOrCreateThumbnail(imagePath string) (string, error) 
 		c.mu.RUnlock()
 		// Verify it still exists
 		if _, err := os.Stat(thumb); err == nil {
+			c.updateAccessOrder(imagePath)
 			return thumb, nil
 		}
 	}
@@ -129,9 +164,13 @@ func (c *ThumbnailCache) GetOrCreateThumbnail(imagePath string) (string, error) 
 	if _, err := os.Stat(thumbPath); err == nil {
 		c.mu.Lock()
 		c.thumbnails[imagePath] = thumbPath
+		c.addToAccessOrder(imagePath)
 		c.mu.Unlock()
 		return thumbPath, nil
 	}
+
+	// Evict old entries if cache is full
+	c.evictIfNeeded()
 
 	// Generate thumbnail
 	if err := c.generateThumbnail(imagePath, thumbPath); err != nil {
@@ -140,9 +179,49 @@ func (c *ThumbnailCache) GetOrCreateThumbnail(imagePath string) (string, error) 
 
 	c.mu.Lock()
 	c.thumbnails[imagePath] = thumbPath
+	c.addToAccessOrder(imagePath)
 	c.mu.Unlock()
 
 	return thumbPath, nil
+}
+
+// updateAccessOrder moves an item to the end of the access order (most recently used)
+func (c *ThumbnailCache) updateAccessOrder(path string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Remove from current position
+	for i, p := range c.accessOrder {
+		if p == path {
+			c.accessOrder = append(c.accessOrder[:i], c.accessOrder[i+1:]...)
+			break
+		}
+	}
+	// Add to end
+	c.accessOrder = append(c.accessOrder, path)
+}
+
+// addToAccessOrder adds an item to the access order (must hold write lock)
+func (c *ThumbnailCache) addToAccessOrder(path string) {
+	c.accessOrder = append(c.accessOrder, path)
+}
+
+// evictIfNeeded removes the oldest cache entries if the cache is full
+func (c *ThumbnailCache) evictIfNeeded() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for len(c.thumbnails) >= shared.MaxCacheSize && len(c.accessOrder) > 0 {
+		// Remove oldest entry
+		oldest := c.accessOrder[0]
+		c.accessOrder = c.accessOrder[1:]
+
+		if thumbPath, ok := c.thumbnails[oldest]; ok {
+			delete(c.thumbnails, oldest)
+			// Optionally remove the file from disk
+			_ = os.Remove(thumbPath)
+		}
+	}
 }
 
 // generateThumbnail creates a thumbnail image
@@ -154,7 +233,7 @@ func (c *ThumbnailCache) generateThumbnail(srcPath, dstPath string) error {
 	}
 
 	// Resize to thumbnail size using Box filter (fast, good quality for downscaling)
-	thumb := imaging.Fit(src, ThumbnailSize, ThumbnailSize, imaging.Box)
+	thumb := imaging.Fit(src, shared.ThumbnailSize, shared.ThumbnailSize, imaging.Box)
 
 	// Save as JPEG for smaller size and faster encoding
 	if err := imaging.Save(thumb, dstPath); err != nil {
@@ -209,18 +288,6 @@ func generateCacheKey(path string, mtime int64) string {
 	data := fmt.Sprintf("%s:%d", path, mtime)
 	hash := md5.Sum([]byte(data))
 	return hex.EncodeToString(hash[:])
-}
-
-// isValidImage checks if a file is a valid image format
-func isValidImage(name string) bool {
-	lower := strings.ToLower(name)
-	validExts := []string{".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
-	for _, ext := range validExts {
-		if strings.HasSuffix(lower, ext) {
-			return true
-		}
-	}
-	return false
 }
 
 // GetCacheDir returns the cache directory path

@@ -7,12 +7,38 @@ import (
 	"strings"
 
 	"peachy/internal/cache"
-	"peachy/internal/color"
+	"peachy/internal/shared"
 	"peachy/internal/terminal"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// FileFilter defines an interface for filtering file entries
+type FileFilter interface {
+	Match(entry FileEntry) bool
+}
+
+// ImageFilter filters for valid image files
+type ImageFilter struct{}
+
+// Match returns true if the entry is a valid image file
+func (f ImageFilter) Match(entry FileEntry) bool {
+	return !entry.IsDir && shared.IsValidImage(entry.Name)
+}
+
+// SearchFilter filters entries by search query
+type SearchFilter struct {
+	Query string
+}
+
+// Match returns true if the entry name contains the search query
+func (f SearchFilter) Match(entry FileEntry) bool {
+	if f.Query == "" {
+		return true
+	}
+	return strings.Contains(strings.ToLower(entry.Name), strings.ToLower(f.Query))
+}
 
 // FileEntry represents a file or directory
 type FileEntry struct {
@@ -178,7 +204,7 @@ func (f *FilePicker) loadDir() {
 
 		if file.IsDir() {
 			dirs = append(dirs, entry)
-		} else if color.IsValidImage(file.Name()) {
+		} else if shared.IsValidImage(file.Name()) {
 			images = append(images, entry)
 		}
 	}

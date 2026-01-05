@@ -1,5 +1,7 @@
 package color
 
+import "strings"
+
 // ExtractionMode represents the palette extraction algorithm to use
 type ExtractionMode string
 
@@ -59,4 +61,20 @@ func PrevMode(current ExtractionMode) ExtractionMode {
 		}
 	}
 	return ModeNormal
+}
+
+// ParseMode parses a string into an ExtractionMode, returning ModeNormal as default
+func ParseMode(s string) ExtractionMode {
+	switch strings.ToLower(s) {
+	case "monochromatic", "mono":
+		return ModeMonochromatic
+	case "analogous":
+		return ModeAnalogous
+	case "pastel":
+		return ModePastel
+	case "material":
+		return ModeMaterial
+	default:
+		return ModeNormal
+	}
 }

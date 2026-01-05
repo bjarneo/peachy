@@ -184,4 +184,6 @@ cp -r /path/to/peachy/examples/templates/kitty ~/.config/peachy/templates/
 ## Next Steps
 
 - [Template Variables](template-variables.md) - All available color variables and modifiers
-- [Examples](examples/) - Walkthrough for specific applications
+- [Cava Example](examples/cava.md) - Audio visualizer template walkthrough
+- [Zed Example](examples/zed.md) - Zed editor theme
+- [VS Code Example](examples/vscode.md) - VS Code live theming via settings.json

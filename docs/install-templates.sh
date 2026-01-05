@@ -41,10 +41,12 @@ declare -A TEMPLATES=(
     ["rofi"]="Application launcher"
     ["swayosd"]="On-screen display for Sway/Hyprland"
     ["vencord"]="Discord client mod theme"
+    ["vscode"]="VS Code live theme via settings.json"
     ["walker"]="Wayland application launcher"
     ["warp"]="Modern terminal with AI features"
     ["waybar"]="Wayland status bar"
     ["wofi"]="Wayland application launcher"
+    ["zed"]="Zed code editor theme"
 )
 
 # Platform-specific templates
@@ -143,10 +145,12 @@ download_template() {
         rofi) files+=("colors.rasi") ;;
         swayosd) files+=("style.css") ;;
         vencord) files+=("peachy.theme.css") ;;
+        vscode) files+=("apply-theme.sh" "post-apply") ;;
         walker) files+=("colors.css") ;;
         warp) files+=("peachy.yaml") ;;
         waybar) files+=("colors.css" "post-apply") ;;
         wofi) files+=("colors.css") ;;
+        zed) files+=("peachy.json") ;;
     esac
 
     mkdir -p "$dest_dir"

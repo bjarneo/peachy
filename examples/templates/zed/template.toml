@@ -1,0 +1,8 @@
+name = "Zed"
+description = "Zed code editor theme"
+version = "1.0"
+condition = "zeditor"
+
+[[files]]
+template = "peachy.json"
+destination = "~/.config/zed/themes/peachy.json"

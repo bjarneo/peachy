@@ -25,7 +25,8 @@ type CacheScanCompleteMsg struct {
 type ViewState int
 
 const (
-	ViewMain ViewState = iota
+	ViewSplash ViewState = iota
+	ViewMain
 	ViewEditor
 	ViewFilePicker
 	ViewHelp
@@ -41,6 +42,7 @@ type Model struct {
 	filePicker  components.FilePicker
 	preview     components.Preview
 	help        components.Help
+	splash      SplashModel
 
 	// State
 	palette         *color.Palette
@@ -99,21 +101,25 @@ func NewModel() Model {
 		filePicker:     filePicker,
 		preview:        preview,
 		help:           components.NewHelp(),
+		splash:         NewSplashModel(),
 		palette:        palette,
 		extractor:      color.NewExtractor(),
 		thumbnailCache: thumbCache,
 		extractionMode: color.ModeNormal,
 		lightMode:      false,
 		keys:           DefaultKeyMap(),
-		viewState:      ViewMain,
+		viewState:      ViewSplash,
 		status:         shared.Info("Scanning wallpapers..."),
 	}
 }
 
 // Init implements tea.Model
 func (m Model) Init() tea.Cmd {
-	// Start scanning thumbnails in background
-	return m.scanThumbnails()
+	// Start splash animation and thumbnail scanning in parallel
+	return tea.Batch(
+		splashTick(),
+		m.scanThumbnails(),
+	)
 }
 
 // scanThumbnails starts background thumbnail scanning
@@ -133,6 +139,17 @@ func (m Model) scanThumbnails() tea.Cmd {
 // Update implements tea.Model
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case splashTickMsg:
+		if m.viewState == ViewSplash {
+			m.splash.frame++
+			if m.splash.frame >= m.splash.maxFrame {
+				m.viewState = ViewMain
+				return m, nil
+			}
+			return m, splashTick()
+		}
+		return m, nil
+
 	case CacheScanCompleteMsg:
 		m.cacheScanned = true
 		if msg.Err != nil {
@@ -147,6 +164,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.splash.width = msg.Width
+		m.splash.height = msg.Height
 		m.updateComponentSizes()
 		return m, nil
 
@@ -155,6 +174,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			m.quitting = true
 			return m, tea.Quit
+		}
+
+		// Skip splash on any key
+		if m.viewState == ViewSplash {
+			m.viewState = ViewMain
+			return m, nil
 		}
 
 		// Handle based on current view
@@ -539,6 +564,8 @@ func (m Model) View() string {
 
 	// Render based on current view
 	switch m.viewState {
+	case ViewSplash:
+		sb.WriteString(m.renderSplash())
 	case ViewHelp:
 		// Overlay help on main view
 		sb.WriteString(m.renderMain())
@@ -564,6 +591,10 @@ func (m Model) View() string {
 
 func (m Model) renderMain() string {
 	return m.renderLayout(m.colorList.View(), m.preview.View())
+}
+
+func (m Model) renderSplash() string {
+	return m.splash.View()
 }
 
 func (m Model) renderMainWithEditor() string {

@@ -78,6 +78,15 @@ func GetEmbeddedTemplateFiles() ([]string, error) {
 	return files, nil
 }
 
+// ReadTemplateFile reads a template file by name from the embedded templates
+func ReadTemplateFile(filename string) (string, error) {
+	content, err := templatesFS.ReadFile("templates/" + filename)
+	if err != nil {
+		return "", fmt.Errorf("failed to read template %s: %w", filename, err)
+	}
+	return string(content), nil
+}
+
 // BuildTemplateVariables creates the variable map from a palette
 func BuildTemplateVariables(p *color.Palette) map[string]string {
 	vars := make(map[string]string)

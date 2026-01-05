@@ -297,3 +297,23 @@ func ListThemes() ([]string, error) {
 	}
 	return themes, nil
 }
+
+// ExportTheme exports a palette to a custom directory
+func ExportTheme(p *color.Palette, imagePath, outputDir string) error {
+	outputDir = ExpandPath(outputDir)
+
+	// Create output directory
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// Save colors.toml
+	colorsPath := outputDir + "/colors.toml"
+	cfg := paletteToConfig(p)
+	content := formatConfigWithComments(cfg)
+	if err := os.WriteFile(colorsPath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write colors.toml: %w", err)
+	}
+
+	return nil
+}

@@ -12,9 +12,10 @@
   <a href="#features">Features</a> •
   <a href="#installation">Installation</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#theme-management">Theme Management</a> •
-  <a href="#extraction-modes">Extraction Modes</a>
+  <a href="#cli-commands">CLI</a> •
+  <a href="#usage">TUI Usage</a> •
+  <a href="#extraction-modes">Extraction Modes</a> •
+  <a href="#theme-management">Themes</a>
 </p>
 
 ---
@@ -73,19 +74,104 @@ sudo mv peachy /usr/local/bin/
 ## Quick Start
 
 ```bash
-# Launch Peachy
-./peachy
+# Launch the TUI
+peachy
 
-# Or with an image
-./peachy ~/Pictures/wallpaper.png
+# Open TUI with an image
+peachy ~/Pictures/wallpaper.png
 
-# Or load an existing config
-./peachy -c ~/.config/peachy/colors.toml
+# Generate theme from command line (no TUI)
+peachy generate wallpaper.jpg
+
+# Generate from random wallpaper and save
+peachy generate --random --save mytheme
+
+# Apply a saved theme
+peachy apply mytheme
 ```
 
 That's it. Press `o` to open the file picker, select an image, and watch the magic happen.
 
-## Usage
+## CLI Commands
+
+Peachy provides a full CLI for headless theme generation and management.
+
+```bash
+peachy [image]              # Launch TUI (optionally with image)
+peachy generate <image>     # Generate theme from image
+peachy apply <theme>        # Apply a saved theme
+peachy list                 # List saved themes
+peachy info <theme>         # Show theme color details
+peachy export <theme> <dir> # Export theme to folder
+peachy delete <theme>       # Delete a saved theme
+```
+
+### Generate Command
+
+Generate themes from the command line without opening the TUI.
+
+```bash
+peachy generate wallpaper.jpg                    # Generate and apply
+peachy generate wallpaper.jpg --save mytheme     # Save as named theme
+peachy generate wallpaper.jpg --mode pastel      # Use pastel extraction
+peachy generate wallpaper.jpg --light            # Generate light theme
+peachy generate --random --save random-theme     # Random wallpaper from ~/Wallpapers
+peachy generate wallpaper.jpg --no-apply         # Generate files only
+peachy generate wallpaper.jpg -o ~/exports       # Export to custom directory
+```
+
+**Flags:**
+| Flag | Description |
+|------|-------------|
+| `-m, --mode` | Extraction mode: normal, monochromatic, analogous, pastel, material |
+| `-l, --light` | Generate light theme instead of dark |
+| `-s, --save` | Save theme with given name |
+| `-o, --output` | Output directory for exported files |
+| `-r, --random` | Use random wallpaper from ~/Wallpapers |
+| `--no-apply` | Generate files only, don't apply theme |
+
+### Export Command
+
+Export a saved theme to a folder with all config files. Creates a complete theme folder suitable for Omarchy or manual use.
+
+```bash
+peachy export mytheme ~/themes/mytheme
+peachy export mytheme ~/.config/omarchy/themes/mytheme
+```
+
+The exported folder contains:
+- `btop.theme` - btop system monitor
+- `chromium.theme` - Chromium browser
+- `colors.toml` - Universal color config
+- `icons.theme` - Desktop icon theme
+- `neovim.lua` - Neovim colorscheme
+- `vscode.empty.json` - VS Code theme
+
+### Other Commands
+
+```bash
+# List all saved themes
+peachy list
+
+# Show detailed color info for a theme
+peachy info mytheme
+
+# Apply a saved theme to the system
+peachy apply mytheme
+
+# Delete a theme
+peachy delete mytheme
+```
+
+### Root Flags
+
+```bash
+peachy -c ~/.config/custom/colors.toml    # Load custom config
+peachy --version                          # Show version
+peachy --help                             # Show help
+```
+
+## TUI Usage
 
 ### Main View
 
@@ -304,35 +390,6 @@ color12 = "#6BA3F7"   # bright_blue
 color13 = "#F76BF7"   # bright_magenta
 color14 = "#6BF7F7"   # bright_cyan
 color15 = "#FFFFFF"   # bright_white
-```
-
-### CLI Options
-
-```bash
-peachy [flags] [image]
-
-Flags:
-  -a, --apply <name>    Apply a saved theme (writes to ~/.config/peachy/theme)
-  -c, --config <path>   Path to colors.toml file
-  -i, --image <path>    Path to image file
-  -h, --help            Show help
-  -v, --version         Show version
-```
-
-**Examples:**
-
-```bash
-# Launch the TUI
-peachy
-
-# Extract colors from an image
-peachy ~/Pictures/wallpaper.png
-
-# Load an existing config
-peachy -c ~/.config/peachy/colors.toml
-
-# Apply a saved theme
-peachy --apply nord
 ```
 
 ## Related Projects

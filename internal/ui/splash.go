@@ -118,7 +118,7 @@ func (m SplashModel) View() string {
 	tagline := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(retroColors[(offset+3)%len(retroColors)])).
 		Italic(true).
-		Render("Terminal themes from images")
+		Render("Theming by x.com/iamdothash")
 	b.WriteString("\n")
 	b.WriteString(fmt.Sprintf("%s\n", tagline))
 

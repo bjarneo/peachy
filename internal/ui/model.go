@@ -282,8 +282,9 @@ func (m Model) updateFilePicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		if selected := m.filePicker.Selected(); selected != "" {
 			m.imagePath = selected
+			m.preview.SetImage(selected)
 			m.viewState = ViewMain
-			return m.extractColors()
+			m.status = shared.Info("Opened " + filepath.Base(selected) + " - press 'e' to extract colors")
 		}
 
 		return m, cmd

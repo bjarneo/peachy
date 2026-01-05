@@ -549,9 +549,20 @@ func (m *Model) SetImagePath(path string) {
 	m.imagePath = path
 }
 
-// SetConfigPath sets the config file path
+// SetConfigPath sets the config file path and loads the palette from it
 func (m *Model) SetConfigPath(path string) {
 	m.configPath = path
+
+	// Load palette from the config file
+	palette, err := config.LoadConfig(path)
+	if err != nil {
+		return // silently fail, will show default palette
+	}
+
+	m.palette = palette
+	m.originalPalette = palette.Clone()
+	m.colorList.SetPalette(m.palette)
+	m.preview.SetPalette(m.palette)
 }
 
 // View implements tea.Model

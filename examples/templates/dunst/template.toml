@@ -1,0 +1,8 @@
+name = "Dunst"
+description = "Lightweight notification daemon"
+version = "1.0"
+condition = "dunst"
+
+[[files]]
+template = "colors.conf"
+destination = "~/.config/dunst/peachy-colors.conf"

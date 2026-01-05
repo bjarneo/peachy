@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Import iTerm2 color profile
+# Note: iTerm2 needs to be restarted or profile manually imported
+
+PROFILE_PATH="$HOME/.config/peachy/iterm2/peachy.itermcolors"
+
+if [[ "$OSTYPE" == "darwin"* ]] && [[ -f "$PROFILE_PATH" ]]; then
+    # Open the color profile with iTerm2 (triggers import dialog)
+    open "$PROFILE_PATH" 2>/dev/null || true
+fi
+
+exit 0

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"peachy/internal/color"
+	"peachy/internal/templates"
 )
 
 //go:embed templates/*
@@ -418,6 +419,12 @@ func ApplyThemeToSystem(p *color.Palette, wallpaperPath string) error {
 	// Run omarchy-theme-set if on omarchy system
 	if err := RunOmarchyThemeSet(); err != nil {
 		return fmt.Errorf("failed to apply omarchy theme: %w", err)
+	}
+
+	// Process custom templates (errors are non-fatal)
+	if _, err := templates.ProcessAllTemplates(p); err != nil {
+		// Log but don't fail - custom templates are optional
+		fmt.Fprintf(os.Stderr, "Warning: custom templates: %v\n", err)
 	}
 
 	return nil

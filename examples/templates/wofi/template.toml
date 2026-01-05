@@ -1,0 +1,8 @@
+name = "Wofi"
+description = "Application launcher for wlroots compositors"
+version = "1.0"
+condition = "wofi"
+
+[[files]]
+template = "colors.css"
+destination = "~/.config/wofi/peachy-colors.css"

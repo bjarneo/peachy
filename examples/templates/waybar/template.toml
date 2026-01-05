@@ -1,0 +1,8 @@
+name = "Waybar"
+description = "Wayland bar for Sway and Hyprland"
+version = "1.0"
+condition = "waybar"
+
+[[files]]
+template = "colors.css"
+destination = "~/.config/waybar/peachy-colors.css"

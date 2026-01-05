@@ -1,0 +1,9 @@
+/* Peachy colors for Walker */
+/* Import in your style.css: @import "peachy-colors.css"; */
+
+@define-color selected-text {blue};
+@define-color text {foreground};
+@define-color base {background};
+@define-color border {bright_black};
+@define-color foreground {foreground};
+@define-color background {background};

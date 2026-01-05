@@ -1,0 +1,69 @@
+# Peachy theme for btop
+# Set color_theme = "peachy" in btop.conf
+
+# Main background
+theme[main_bg]="{background}"
+
+# Main text color
+theme[main_fg]="{foreground}"
+
+# Title color for boxes
+theme[title]="{magenta}"
+
+# Highlight color for keyboard shortcuts
+theme[hi_fg]="{cyan}"
+
+# Background color of selected item in processes box
+theme[selected_bg]="{bright_black}"
+
+# Foreground color of selected item in processes box
+theme[selected_fg]="{foreground}"
+
+# Color of inactive/disabled text
+theme[inactive_fg]="{bright_black}"
+
+# Misc colors for processes box
+theme[proc_misc]="{magenta}"
+
+# Box outline colors
+theme[cpu_box]="{green}"
+theme[mem_box]="{green}"
+theme[net_box]="{green}"
+theme[proc_box]="{green}"
+theme[div_line]="{bright_black}"
+
+# Temperature gradient
+theme[temp_start]="{cyan}"
+theme[temp_mid]="{blue}"
+theme[temp_end]="{green}"
+
+# CPU gradient
+theme[cpu_start]="{cyan}"
+theme[cpu_mid]="{blue}"
+theme[cpu_end]="{green}"
+
+# Memory gradients
+theme[free_start]="{blue}"
+theme[free_mid]="{yellow}"
+theme[free_end]="{yellow}"
+
+theme[cached_start]="{yellow}"
+theme[cached_mid]="{yellow}"
+theme[cached_end]="{yellow}"
+
+theme[available_start]="{cyan}"
+theme[available_mid]="{cyan}"
+theme[available_end]="{cyan}"
+
+theme[used_start]="{green}"
+theme[used_mid]="{green}"
+theme[used_end]="{green}"
+
+# Network gradients
+theme[download_start]="{yellow}"
+theme[download_mid]="{cyan}"
+theme[download_end]="{blue}"
+
+theme[upload_start]="{yellow}"
+theme[upload_mid]="{cyan}"
+theme[upload_end]="{blue}"

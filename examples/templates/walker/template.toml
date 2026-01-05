@@ -1,0 +1,8 @@
+name = "Walker"
+description = "Application launcher for Wayland"
+version = "1.0"
+condition = "walker"
+
+[[files]]
+template = "colors.css"
+destination = "~/.config/walker/peachy-colors.css"

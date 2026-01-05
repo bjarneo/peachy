@@ -13,9 +13,10 @@
   <a href="#installation">Installation</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#cli-commands">CLI</a> •
-  <a href="#usage">TUI Usage</a> •
+  <a href="#tui-usage">TUI Usage</a> •
   <a href="#extraction-modes">Extraction Modes</a> •
-  <a href="#theme-management">Themes</a>
+  <a href="#theme-management">Themes</a> •
+  <a href="#custom-templates">Templates</a>
 </p>
 
 ---
@@ -390,6 +391,95 @@ color12 = "#6BA3F7"   # bright_blue
 color13 = "#F76BF7"   # bright_magenta
 color14 = "#6BF7F7"   # bright_cyan
 color15 = "#FFFFFF"   # bright_white
+```
+
+## Custom Templates
+
+Peachy supports custom templates to automatically generate config files for any application when you apply a theme. Templates work on both **Linux** and **macOS**.
+
+### Quick Install
+
+Install templates with the interactive installer:
+
+```bash
+# Run the installer
+curl -fsSL https://raw.githubusercontent.com/bjarneo/peachy/main/docs/install-templates.sh | bash
+
+# Or download and run locally
+curl -O https://raw.githubusercontent.com/bjarneo/peachy/main/docs/install-templates.sh
+chmod +x install-templates.sh
+./install-templates.sh
+```
+
+### Available Templates
+
+| Template | Description | Platform |
+|----------|-------------|----------|
+| alacritty | GPU-accelerated terminal | All |
+| btop | Resource monitor | All |
+| cava | Console audio visualizer | All |
+| dunst | Notification daemon | All |
+| foot | Fast Wayland terminal | Linux |
+| ghostty | Zig-based terminal | All |
+| gtk | GTK3/GTK4 theming | All |
+| hyprland | Wayland compositor | Linux |
+| hyprlock | Hyprland screen locker | Linux |
+| iterm2 | macOS terminal | macOS |
+| kitty | GPU terminal emulator | All |
+| mako | Wayland notifications | Linux |
+| neovim | aether.nvim colorscheme | All |
+| rofi | Application launcher | All |
+| swayosd | On-screen display | Linux |
+| vencord | Discord theme | All |
+| walker | Wayland launcher | Linux |
+| warp | AI terminal | All |
+| waybar | Wayland status bar | Linux |
+| wofi | Wayland launcher | Linux |
+
+### Manual Installation
+
+Copy templates from the repo to your config:
+
+```bash
+# Clone and copy specific templates
+git clone https://github.com/bjarneo/peachy.git
+cp -r peachy/examples/templates/kitty ~/.config/peachy/templates/
+cp -r peachy/examples/templates/alacritty ~/.config/peachy/templates/
+```
+
+### Template Commands
+
+```bash
+peachy templates list       # List installed templates
+peachy templates validate   # Check templates for errors
+peachy templates apply      # Apply templates manually
+peachy templates init       # Create templates directory
+```
+
+### Creating Custom Templates
+
+Create your own templates for any application. See [Custom Templates Documentation](docs/custom-templates.md) for details.
+
+```bash
+mkdir -p ~/.config/peachy/templates/myapp
+```
+
+Create `template.toml`:
+```toml
+name = "My App"
+description = "Theme for my application"
+condition = "myapp"  # Only run if myapp exists
+
+[[files]]
+template = "colors.conf"
+destination = "~/.config/myapp/colors.conf"
+```
+
+Create `colors.conf` with color variables:
+```
+background = {background}
+foreground = {foreground}
+accent = {blue}
 ```
 
 ## Related Projects

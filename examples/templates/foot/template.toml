@@ -1,0 +1,8 @@
+name = "Foot"
+description = "Fast Wayland terminal emulator"
+version = "1.0"
+condition = "foot"
+
+[[files]]
+template = "colors.ini"
+destination = "~/.config/foot/peachy-colors.ini"

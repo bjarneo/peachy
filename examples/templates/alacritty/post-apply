@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Alacritty auto-reloads on config change
+# This script is here as an example; no action needed
+exit 0

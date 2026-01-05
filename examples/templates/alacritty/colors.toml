@@ -1,0 +1,34 @@
+# Peachy generated colors for Alacritty
+# Import this in alacritty.toml: [general] import = ["~/.config/alacritty/peachy-colors.toml"]
+
+[colors.primary]
+foreground = "{foreground}"
+background = "{background}"
+
+[colors.cursor]
+cursor = "{foreground}"
+text = "{background}"
+
+[colors.selection]
+background = "{blue}"
+text = "{background}"
+
+[colors.normal]
+black = "{black}"
+red = "{red}"
+green = "{green}"
+yellow = "{yellow}"
+blue = "{blue}"
+magenta = "{magenta}"
+cyan = "{cyan}"
+white = "{white}"
+
+[colors.bright]
+black = "{bright_black}"
+red = "{bright_red}"
+green = "{bright_green}"
+yellow = "{bright_yellow}"
+blue = "{bright_blue}"
+magenta = "{bright_magenta}"
+cyan = "{bright_cyan}"
+white = "{bright_white}"

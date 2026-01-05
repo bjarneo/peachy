@@ -1,0 +1,10 @@
+name = "iTerm2"
+description = "macOS terminal emulator color profile"
+version = "1.0"
+
+# iTerm2 is macOS-only, so no condition needed
+# (the template just won't be useful on Linux)
+
+[[files]]
+template = "peachy.itermcolors"
+destination = "~/.config/peachy/iterm2/peachy.itermcolors"

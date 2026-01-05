@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Reload kitty configuration
+# Note: Requires kitty to be running with remote control enabled
+# Add to kitty.conf: allow_remote_control yes
+if command -v kitty &> /dev/null; then
+    kitty @ set-colors --all ~/.config/kitty/peachy-colors.conf 2>/dev/null || true
+fi
+exit 0

@@ -1,0 +1,11 @@
+name = "GTK"
+description = "GTK3/GTK4 application theming"
+version = "1.0"
+
+[[files]]
+template = "colors.css"
+destination = "~/.config/gtk-4.0/peachy-colors.css"
+
+[[files]]
+template = "colors.css"
+destination = "~/.config/gtk-3.0/peachy-colors.css"

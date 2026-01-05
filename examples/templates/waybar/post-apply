@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Reload waybar
+pkill -SIGUSR2 waybar 2>/dev/null || true
+exit 0

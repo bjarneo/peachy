@@ -1,0 +1,8 @@
+name = "Cava"
+description = "Audio visualizer with gradient colors"
+version = "1.0"
+condition = "cava"
+
+[[files]]
+template = "theme.ini"
+destination = "~/.config/cava/peachy.ini"

@@ -1,0 +1,8 @@
+name = "Hyprlock"
+description = "Screen locker for Hyprland"
+version = "1.0"
+condition = "hyprlock"
+
+[[files]]
+template = "colors.conf"
+destination = "~/.config/hypr/peachy-hyprlock-colors.conf"

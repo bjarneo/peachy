@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Reload dunst
+pkill dunst 2>/dev/null
+dunst &
+exit 0

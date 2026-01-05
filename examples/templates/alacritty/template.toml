@@ -1,0 +1,8 @@
+name = "Alacritty"
+description = "GPU-accelerated terminal emulator"
+version = "1.0"
+condition = "alacritty"
+
+[[files]]
+template = "colors.toml"
+destination = "~/.config/alacritty/peachy-colors.toml"

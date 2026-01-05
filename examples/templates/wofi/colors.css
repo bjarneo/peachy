@@ -1,0 +1,49 @@
+/* Peachy colors for Wofi */
+/* Import in style.css: @import "peachy-colors.css"; */
+
+@define-color bg {background};
+@define-color fg {foreground};
+@define-color accent {blue};
+@define-color border {bright_black};
+@define-color selected {green};
+@define-color fg_bright {bright_white};
+
+window {
+    background-color: @bg;
+    border: 2px solid @accent;
+}
+
+#input {
+    background-color: @bg;
+    color: @fg;
+    border: 1px solid @border;
+}
+
+#input:focus {
+    border-color: @accent;
+}
+
+#entry {
+    color: @fg;
+    background-color: @bg;
+    padding: 5px;
+    margin: 2px;
+}
+
+#entry:selected {
+    background-color: @selected;
+    color: @fg_bright;
+}
+
+scrollbar {
+    background-color: @bg;
+}
+
+scrollbar slider {
+    background-color: @border;
+    border-radius: 5px;
+}
+
+scrollbar slider:hover {
+    background-color: @accent;
+}

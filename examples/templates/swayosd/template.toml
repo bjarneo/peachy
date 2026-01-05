@@ -1,0 +1,8 @@
+name = "SwayOSD"
+description = "On-screen display for Sway/Hyprland"
+version = "1.0"
+condition = "swayosd-client"
+
+[[files]]
+template = "style.css"
+destination = "~/.config/swayosd/peachy-style.css"

@@ -1,0 +1,8 @@
+name = "Mako"
+description = "Lightweight notification daemon for Wayland"
+version = "1.0"
+condition = "mako"
+
+[[files]]
+template = "config"
+destination = "~/.config/mako/peachy-config"

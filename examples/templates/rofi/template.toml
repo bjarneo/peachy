@@ -1,0 +1,8 @@
+name = "Rofi"
+description = "Application launcher and dmenu replacement"
+version = "1.0"
+condition = "rofi"
+
+[[files]]
+template = "colors.rasi"
+destination = "~/.config/rofi/peachy-colors.rasi"

@@ -1,0 +1,31 @@
+/* Peachy generated colors for Rofi */
+/* Import in your theme: @import "peachy-colors.rasi" */
+
+* {
+    peachy-background:     {background};
+    peachy-foreground:     {foreground};
+    peachy-black:          {black};
+    peachy-red:            {red};
+    peachy-green:          {green};
+    peachy-yellow:         {yellow};
+    peachy-blue:           {blue};
+    peachy-magenta:        {magenta};
+    peachy-cyan:           {cyan};
+    peachy-white:          {white};
+    peachy-bright-black:   {bright_black};
+    peachy-bright-red:     {bright_red};
+    peachy-bright-green:   {bright_green};
+    peachy-bright-yellow:  {bright_yellow};
+    peachy-bright-blue:    {bright_blue};
+    peachy-bright-magenta: {bright_magenta};
+    peachy-bright-cyan:    {bright_cyan};
+    peachy-bright-white:   {bright_white};
+
+    /* Common assignments */
+    background-color:      @peachy-background;
+    text-color:            @peachy-foreground;
+    selected-background:   @peachy-blue;
+    selected-foreground:   @peachy-background;
+    urgent-background:     @peachy-red;
+    active-background:     @peachy-green;
+}

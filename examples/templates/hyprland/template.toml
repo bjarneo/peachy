@@ -1,0 +1,8 @@
+name = "Hyprland"
+description = "Dynamic tiling Wayland compositor"
+version = "1.0"
+condition = "hyprctl"
+
+[[files]]
+template = "colors.conf"
+destination = "~/.config/hypr/peachy-colors.conf"

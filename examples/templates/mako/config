@@ -1,0 +1,26 @@
+# Peachy generated colors for Mako
+# Use as: mako -c ~/.config/mako/peachy-config
+
+text-color={foreground}
+border-color={magenta}
+background-color={background}
+width=420
+height=110
+padding=10
+border-size=2
+anchor=top-right
+outer-margin=20
+default-timeout=5000
+max-icon-size=32
+
+[urgency=low]
+background-color={background}
+border-color={bright_black}
+
+[urgency=high]
+background-color={red}
+text-color={background}
+border-color={bright_red}
+
+[mode=do-not-disturb]
+invisible=true

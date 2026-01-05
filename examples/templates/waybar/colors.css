@@ -1,0 +1,25 @@
+/* Peachy generated colors for Waybar */
+/* Import in style.css: @import "peachy-colors.css"; */
+
+@define-color peachy-background {background};
+@define-color peachy-foreground {foreground};
+@define-color peachy-black {black};
+@define-color peachy-red {red};
+@define-color peachy-green {green};
+@define-color peachy-yellow {yellow};
+@define-color peachy-blue {blue};
+@define-color peachy-magenta {magenta};
+@define-color peachy-cyan {cyan};
+@define-color peachy-white {white};
+@define-color peachy-bright-black {bright_black};
+@define-color peachy-bright-red {bright_red};
+@define-color peachy-bright-green {bright_green};
+@define-color peachy-bright-yellow {bright_yellow};
+@define-color peachy-bright-blue {bright_blue};
+@define-color peachy-bright-magenta {bright_magenta};
+@define-color peachy-bright-cyan {bright_cyan};
+@define-color peachy-bright-white {bright_white};
+
+/* Semi-transparent variants */
+@define-color peachy-background-alpha {background.rgba:0.9};
+@define-color peachy-black-alpha {black.rgba:0.8};

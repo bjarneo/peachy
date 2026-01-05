@@ -1,0 +1,8 @@
+name = "Ghostty"
+description = "Zig-based GPU-accelerated terminal"
+version = "1.0"
+condition = "ghostty"
+
+[[files]]
+template = "colors.conf"
+destination = "~/.config/ghostty/peachy-colors"

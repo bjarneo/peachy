@@ -10,6 +10,7 @@ import (
 	"peachy/internal/color"
 	"peachy/internal/config"
 	"peachy/internal/shared"
+	"peachy/internal/templates"
 
 	"github.com/spf13/cobra"
 )
@@ -113,6 +114,55 @@ var infoCmd = &cobra.Command{
 	RunE:  runInfo,
 }
 
+var templatesCmd = &cobra.Command{
+	Use:   "templates",
+	Short: "Manage custom templates",
+	Long: `Manage custom templates for generating app-specific config files.
+
+Templates are stored in ~/.config/peachy/templates/ and allow you to
+automatically generate configuration files for any application when
+applying a theme.
+
+Each template folder contains:
+  template.toml    Manifest defining template files and destinations
+  *.conf/ini/...   Template files with color variables
+  post-apply       Optional script to run after applying (must be executable)`,
+}
+
+var templatesListCmd = &cobra.Command{
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Short:   "List custom templates",
+	Long:    `List all custom templates found in ~/.config/peachy/templates/`,
+	Args:    cobra.NoArgs,
+	RunE:    runTemplatesList,
+}
+
+var templatesValidateCmd = &cobra.Command{
+	Use:   "validate",
+	Short: "Validate custom templates",
+	Long:  `Check all templates for errors (missing files, invalid manifests, etc.)`,
+	Args:  cobra.NoArgs,
+	RunE:  runTemplatesValidate,
+}
+
+var templatesApplyCmd = &cobra.Command{
+	Use:   "apply",
+	Short: "Apply custom templates",
+	Long: `Process all custom templates with the current theme colors.
+Requires a theme to be applied first, or use --theme to specify one.`,
+	Args: cobra.NoArgs,
+	RunE: runTemplatesApply,
+}
+
+var templatesInitCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Create templates directory",
+	Long:  `Create the templates directory at ~/.config/peachy/templates/`,
+	Args:  cobra.NoArgs,
+	RunE:  runTemplatesInit,
+}
+
 var (
 	// Root command flags
 	flagConfig string
@@ -124,6 +174,10 @@ var (
 	flagOutput      string
 	flagSave        string
 	flagRandom      bool
+
+	// Templates command flags
+	flagTemplateTheme   string
+	flagTemplatesDryRun bool
 )
 
 func init() {
@@ -147,6 +201,15 @@ func init() {
 	rootCmd.AddCommand(exportCmd)
 	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(infoCmd)
+
+	// Templates command and subcommands
+	templatesApplyCmd.Flags().StringVarP(&flagTemplateTheme, "theme", "t", "", "theme to use for template variables")
+	templatesApplyCmd.Flags().BoolVar(&flagTemplatesDryRun, "dry-run", false, "show what would be done without making changes")
+	templatesCmd.AddCommand(templatesListCmd)
+	templatesCmd.AddCommand(templatesValidateCmd)
+	templatesCmd.AddCommand(templatesApplyCmd)
+	templatesCmd.AddCommand(templatesInitCmd)
+	rootCmd.AddCommand(templatesCmd)
 }
 
 func runMain(cmd *cobra.Command, args []string) error {
@@ -335,6 +398,185 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Path:  %s\n\n", config.GetThemePath(themeName))
 
 	config.PrintColoredPalette(palette)
+
+	return nil
+}
+
+// Templates command functions
+
+func runTemplatesList(cmd *cobra.Command, args []string) error {
+	statuses, err := templates.ListTemplates()
+	if err != nil {
+		return fmt.Errorf("listing templates: %w", err)
+	}
+
+	if len(statuses) == 0 {
+		fmt.Println("No custom templates found.")
+		fmt.Printf("Templates directory: %s\n", templates.GetTemplatesDir())
+		fmt.Println("\nCreate a template folder with template.toml to get started.")
+		fmt.Println("See 'peachy templates --help' for more information.")
+		return nil
+	}
+
+	fmt.Println("Custom templates:")
+	for _, s := range statuses {
+		status := "✓"
+		note := ""
+
+		if !s.Enabled {
+			status = "○"
+			note = " (disabled)"
+		} else if !s.ConditionMet {
+			status = "○"
+			note = fmt.Sprintf(" (%s)", s.ConditionError)
+		}
+
+		fmt.Printf("  %s %s%s\n", status, s.Template.Name, note)
+		if s.Template.Manifest.Description != "" {
+			fmt.Printf("      %s\n", s.Template.Manifest.Description)
+		}
+	}
+
+	return nil
+}
+
+func runTemplatesValidate(cmd *cobra.Command, args []string) error {
+	results, err := templates.ValidateTemplates()
+	if err != nil {
+		return fmt.Errorf("validating templates: %w", err)
+	}
+
+	if len(results) == 0 {
+		fmt.Println("No templates to validate.")
+		return nil
+	}
+
+	hasErrors := false
+	for _, r := range results {
+		fmt.Printf("%s:\n", r.Template.Name)
+
+		if r.Valid && len(r.Warnings) == 0 {
+			fmt.Println("  ✓ Valid")
+			continue
+		}
+
+		for _, e := range r.Errors {
+			fmt.Printf("  ✗ Error: %s\n", e)
+			hasErrors = true
+		}
+		for _, w := range r.Warnings {
+			fmt.Printf("  ⚠ Warning: %s\n", w)
+		}
+	}
+
+	if hasErrors {
+		return fmt.Errorf("validation failed")
+	}
+
+	return nil
+}
+
+func runTemplatesApply(cmd *cobra.Command, args []string) error {
+	// Get palette from specified theme or current theme
+	var palette *color.Palette
+	var err error
+
+	if flagTemplateTheme != "" {
+		palette, err = config.LoadTheme(flagTemplateTheme)
+		if err != nil {
+			return fmt.Errorf("loading theme '%s': %w", flagTemplateTheme, err)
+		}
+	} else {
+		// Try to load current theme
+		currentTheme, err := config.GetActiveTheme()
+		if err != nil || currentTheme == "" {
+			return fmt.Errorf("no theme specified and no current theme set.\nUse --theme <name> or apply a theme first")
+		}
+		palette, err = config.LoadTheme(currentTheme)
+		if err != nil {
+			return fmt.Errorf("loading current theme: %w", err)
+		}
+	}
+
+	if flagTemplatesDryRun {
+		return runTemplatesDryRun(palette)
+	}
+
+	results, err := templates.ProcessAllTemplates(palette)
+	if err != nil {
+		return fmt.Errorf("processing templates: %w", err)
+	}
+
+	if len(results) == 0 {
+		fmt.Println("No templates to process.")
+		return nil
+	}
+
+	for _, r := range results {
+		if r.Skipped {
+			fmt.Printf("○ %s (skipped: %s)\n", r.Template.Name, r.SkipReason)
+			continue
+		}
+		if r.Error != nil {
+			fmt.Printf("✗ %s: %s\n", r.Template.Name, r.Error)
+			continue
+		}
+		fmt.Printf("✓ %s\n", r.Template.Name)
+		for _, f := range r.FilesLinked {
+			fmt.Printf("    → %s\n", f)
+		}
+	}
+
+	return nil
+}
+
+func runTemplatesDryRun(palette *color.Palette) error {
+	tpls, err := templates.DiscoverTemplates()
+	if err != nil {
+		return fmt.Errorf("discovering templates: %w", err)
+	}
+
+	if len(tpls) == 0 {
+		fmt.Println("No templates found.")
+		return nil
+	}
+
+	fmt.Println("Dry run - would process:")
+	for _, t := range tpls {
+		if !templates.IsEnabled(t) {
+			fmt.Printf("○ %s (disabled)\n", t.Name)
+			continue
+		}
+		if ok, reason := templates.CheckCondition(t); !ok {
+			fmt.Printf("○ %s (skipped: %s)\n", t.Name, reason)
+			continue
+		}
+
+		fmt.Printf("✓ %s\n", t.Name)
+		for _, f := range t.Manifest.Files {
+			fmt.Printf("    %s → %s\n", f.Template, f.Destination)
+		}
+		if templates.GetPostApplyPath(t) != "" {
+			fmt.Printf("    [post-apply script will run]\n")
+		}
+	}
+
+	return nil
+}
+
+func runTemplatesInit(cmd *cobra.Command, args []string) error {
+	dir := templates.GetTemplatesDir()
+
+	if err := templates.EnsureTemplatesDir(); err != nil {
+		return fmt.Errorf("creating templates directory: %w", err)
+	}
+
+	fmt.Printf("Templates directory: %s\n", dir)
+	fmt.Println("\nTo create a custom template:")
+	fmt.Println("  1. Create a folder: mkdir ~/.config/peachy/templates/myapp")
+	fmt.Println("  2. Add template.toml with file mappings")
+	fmt.Println("  3. Add template files with {color} variables")
+	fmt.Println("  4. (Optional) Add executable post-apply script")
 
 	return nil
 }

@@ -1,0 +1,8 @@
+name = "btop"
+description = "Resource monitor with colorful interface"
+version = "1.0"
+condition = "btop"
+
+[[files]]
+template = "peachy.theme"
+destination = "~/.config/btop/themes/peachy.theme"

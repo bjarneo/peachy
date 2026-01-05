@@ -1,0 +1,8 @@
+name = "Neovim (aether.nvim)"
+description = "LazyVim compatible colorscheme plugin"
+version = "1.0"
+condition = "nvim"
+
+[[files]]
+template = "aether.lua"
+destination = "~/.config/nvim/lua/plugins/peachy-aether.lua"

@@ -1,0 +1,71 @@
+/**
+ * Peachy GTK Color Theme
+ * Import in gtk.css: @import "peachy-colors.css";
+ */
+
+/* Dynamic color palette */
+@define-color background {background};
+@define-color foreground {foreground};
+
+@define-color black {black};
+@define-color red {red};
+@define-color green {green};
+@define-color yellow {yellow};
+@define-color blue {blue};
+@define-color magenta {magenta};
+@define-color cyan {cyan};
+@define-color white {white};
+@define-color bright_black {bright_black};
+@define-color bright_red {bright_red};
+@define-color bright_green {bright_green};
+@define-color bright_yellow {bright_yellow};
+@define-color bright_blue {bright_blue};
+@define-color bright_magenta {bright_magenta};
+@define-color bright_cyan {bright_cyan};
+@define-color bright_white {bright_white};
+
+/* Adwaita Color Overrides */
+@define-color accent_bg_color @blue;
+@define-color accent_fg_color @background;
+@define-color accent_color @cyan;
+
+@define-color window_bg_color @background;
+@define-color window_fg_color @foreground;
+
+@define-color view_bg_color @black;
+@define-color view_fg_color @foreground;
+@define-color sidebar_bg_color @black;
+@define-color sidebar_fg_color @foreground;
+
+@define-color headerbar_bg_color alpha(@foreground, 0.1);
+@define-color headerbar_fg_color @foreground;
+@define-color card_bg_color alpha(@foreground, 0.1);
+@define-color card_fg_color @foreground;
+
+@define-color popover_bg_color @black;
+@define-color popover_fg_color @foreground;
+
+@define-color destructive_bg_color @red;
+@define-color destructive_fg_color @background;
+
+@define-color success_bg_color @green;
+@define-color success_fg_color @background;
+
+@define-color warning_bg_color @yellow;
+@define-color warning_fg_color @background;
+
+@define-color error_bg_color @red;
+@define-color error_fg_color @background;
+
+@define-color dialog_bg_color @background;
+@define-color dialog_fg_color @foreground;
+
+@define-color borders alpha(@foreground, 0.1);
+
+/* GTK3 Legacy Color Variables */
+@define-color theme_fg_color @foreground;
+@define-color theme_text_color @foreground;
+@define-color theme_bg_color @background;
+@define-color theme_base_color @black;
+@define-color theme_selected_bg_color @blue;
+@define-color theme_selected_fg_color @background;

@@ -1,0 +1,8 @@
+name = "Warp"
+description = "Modern terminal with AI features"
+version = "1.0"
+condition = "warp-terminal"
+
+[[files]]
+template = "peachy.yaml"
+destination = "~/.warp/themes/peachy.yaml"

@@ -1,0 +1,7 @@
+name = "Vencord (Discord)"
+description = "Discord client mod theme"
+version = "1.0"
+
+[[files]]
+template = "peachy.theme.css"
+destination = "~/.config/Vencord/themes/peachy.theme.css"

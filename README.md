@@ -24,9 +24,14 @@ Ever found the perfect wallpaper but couldn't get your terminal colors to match?
 
 ## Installation
 
+### Quick Install (Recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bjarneo/peachy/main/install.sh | bash
+```
+
 ### Prerequisites
 
-- **Go 1.21+**
 - **ImageMagick** (for color extraction)
 
 ```bash
@@ -41,6 +46,8 @@ brew install imagemagick
 ```
 
 ### Build from Source
+
+Requires **Go 1.21+**
 
 ```bash
 git clone https://github.com/bjarneo/peachy.git

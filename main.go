@@ -87,8 +87,8 @@ var exportCmd = &cobra.Command{
 	Long: `Export a saved theme to a folder with all config files.
 Creates a complete theme folder suitable for Omarchy or manual use.
 
-The folder will contain all template files:
-  btop.theme, chromium.theme, colors.toml, icons.theme, neovim.lua, vscode.empty.json
+The folder will contain template files for various applications including:
+  alacritty, btop, ghostty, gtk, hyprland, kitty, neovim, waybar, and more.
 
 Examples:
   peachy export mytheme ~/themes/mytheme

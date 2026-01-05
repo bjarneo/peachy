@@ -1,0 +1,8 @@
+name = "VS Code"
+description = "Visual Studio Code live theme via settings.json"
+version = "1.0"
+condition = "code"
+
+[[files]]
+template = "apply-theme.sh"
+destination = "~/.config/peachy/scripts/vscode-apply.sh"

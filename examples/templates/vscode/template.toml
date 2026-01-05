@@ -1,8 +1,12 @@
 name = "VS Code"
-description = "Visual Studio Code live theme via settings.json"
+description = "Visual Studio Code theme extension"
 version = "1.0"
 condition = "code"
 
 [[files]]
-template = "apply-theme.sh"
-destination = "~/.config/peachy/scripts/vscode-apply.sh"
+template = "package.json"
+destination = "~/.vscode/extensions/peachy-theme/package.json"
+
+[[files]]
+template = "peachy-color-theme.json"
+destination = "~/.vscode/extensions/peachy-theme/themes/peachy-color-theme.json"

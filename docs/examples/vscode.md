@@ -1,31 +1,14 @@
 # VS Code Template
 
-This template applies your Peachy color palette directly to VS Code's `settings.json` for live theming without needing a separate extension.
+This template creates a VS Code theme extension that appears in the theme picker.
 
 ## Overview
 
-Unlike traditional VS Code themes, this template modifies `settings.json` directly using `workbench.colorCustomizations` and `editor.tokenColorCustomizations`. This means:
-
-- **Live updates** - Colors change immediately without restart
-- **No extension needed** - Works with vanilla VS Code
-- **Preserves settings** - Only touches color customizations, all other settings remain
-
-## Requirements
-
-- VS Code (`code` command available)
-- `jq` - JSON processor for safe settings manipulation
-
-Install jq:
-```bash
-# Arch
-sudo pacman -S jq
-
-# Ubuntu/Debian
-sudo apt install jq
-
-# macOS
-brew install jq
-```
+The template creates a proper VS Code extension at `~/.vscode/extensions/peachy-theme/` with:
+- Full UI theming (editor, sidebar, panels, tabs, etc.)
+- Syntax highlighting with semantic token colors
+- Terminal ANSI colors
+- Git decoration colors
 
 ## Installation
 
@@ -35,18 +18,30 @@ Copy the template:
 cp -r /path/to/peachy/examples/templates/vscode ~/.config/peachy/templates/
 ```
 
-Make the post-apply script executable:
-
-```bash
-chmod +x ~/.config/peachy/templates/vscode/post-apply
-```
-
 ## How It Works
 
-1. When you apply a Peachy theme, the template generates `apply-theme.sh` with your colors
-2. The `post-apply` script runs `apply-theme.sh`
-3. The script uses `jq` to safely merge color settings into `settings.json`
-4. VS Code detects the settings change and updates colors live
+1. When you apply a Peachy theme, the template generates:
+   - `~/.vscode/extensions/peachy-theme/package.json` - Extension manifest
+   - `~/.vscode/extensions/peachy-theme/themes/peachy-color-theme.json` - Theme colors
+2. VS Code detects the extension on next launch
+3. Select "Peachy" from the theme picker
+
+## Activating the Theme
+
+After applying a Peachy theme:
+
+1. Restart VS Code (or reload window with `Ctrl+Shift+P` → "Reload Window")
+2. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
+3. Type "Color Theme" and select "Preferences: Color Theme"
+4. Choose "Peachy" from the list
+
+Or add to your `settings.json`:
+
+```json
+{
+  "workbench.colorTheme": "Peachy"
+}
+```
 
 ## Files
 
@@ -54,114 +49,88 @@ chmod +x ~/.config/peachy/templates/vscode/post-apply
 
 ```toml
 name = "VS Code"
-description = "Visual Studio Code live theme via settings.json"
+description = "Visual Studio Code theme extension"
 version = "1.0"
 condition = "code"
 
 [[files]]
-template = "apply-theme.sh"
-destination = "~/.config/peachy/scripts/vscode-apply.sh"
+template = "package.json"
+destination = "~/.vscode/extensions/peachy-theme/package.json"
+
+[[files]]
+template = "peachy-color-theme.json"
+destination = "~/.vscode/extensions/peachy-theme/themes/peachy-color-theme.json"
 ```
 
-### apply-theme.sh
+### package.json
 
-A bash script that:
-- Validates existing `settings.json`
-- Creates backup if JSON is malformed
-- Generates comprehensive UI color customizations
-- Generates syntax token customizations with TextMate rules
-- Merges colors into settings using `jq`
+Extension manifest that registers the theme with VS Code.
 
-### post-apply
+### peachy-color-theme.json
 
-Runs the apply script after template processing:
-
-```bash
-#!/bin/bash
-bash ~/.config/peachy/scripts/vscode-apply.sh
-```
+Complete theme definition with:
+- Editor colors
+- UI element colors
+- Syntax token colors
+- Terminal colors
 
 ## What Gets Themed
 
+### Editor
+- Background and foreground
+- Line numbers and cursor
+- Selection and find highlights
+- Bracket matching and highlights
+- Indent guides and rulers
+
 ### UI Elements
-- Editor background and foreground
-- Activity bar, sidebar, panels
+- Activity bar and sidebar
 - Tabs and title bar
-- Status bar (with semantic colors for debugging/remote)
-- Input fields, buttons, dropdowns
-- Lists and trees
-- Notifications and badges
-- Scrollbars and minimap
-- Breadcrumbs and menus
+- Status bar
+- Panels and terminals
+- Quick picker and menus
+- Notifications
 
 ### Syntax Highlighting
-- Comments (italic)
-- Strings, numbers, booleans
+- Comments, strings, numbers
 - Keywords and operators
 - Functions and methods
 - Classes and types
 - Variables and properties
-- Tags and attributes (HTML/XML)
-- Regex and escape sequences
+- HTML/XML tags and attributes
+- Markdown formatting
+- JSON keys
+- CSS properties and selectors
 
 ### Git Integration
 - Added/modified/deleted decorations
 - Diff editor colors
 - Merge conflict highlighting
 
-### Terminal
-- Full ANSI color support (16 colors)
-- Cursor and selection colors
+## Customization
 
-## Manual Application
+Edit `peachy-color-theme.json` to customize colors. The template uses Peachy variables:
 
-If you want to apply colors without using the template system:
+- `{foreground}`, `{background}` - Main colors
+- `{black}` through `{white}` - Normal ANSI colors
+- `{bright_black}` through `{bright_white}` - Bright ANSI colors
 
-```bash
-# Generate the script with current theme
-peachy templates apply --theme mytheme
-
-# Run manually
-bash ~/.config/peachy/scripts/vscode-apply.sh
-```
-
-## Resetting Colors
-
-To remove Peachy customizations and return to your VS Code theme:
-
-```bash
-# Remove color customizations from settings.json
-jq 'del(.["workbench.colorCustomizations"]) | del(.["editor.tokenColorCustomizations"])' \
-  ~/.config/Code/User/settings.json > /tmp/settings.json && \
-  mv /tmp/settings.json ~/.config/Code/User/settings.json
+You can also add hex alpha suffixes for transparency:
+```json
+"editor.selectionBackground": "{blue}44"
 ```
 
 ## Troubleshooting
 
-**"jq required" error:**
-- Install jq (see Requirements above)
+**Theme not appearing:**
+- Restart VS Code after applying
+- Check files exist in `~/.vscode/extensions/peachy-theme/`
+- Verify JSON is valid: `jq . ~/.vscode/extensions/peachy-theme/themes/peachy-color-theme.json`
 
-**Settings not updating:**
-- Check VS Code is looking at the right settings file
-- On some systems it may be `~/.config/Code - OSS/User/settings.json`
-- Modify the `settings_file` path in `apply-theme.sh` if needed
+**Colors not updating:**
+- VS Code caches themes - restart after re-applying
+- Delete `~/.vscode/extensions/peachy-theme/` and re-apply
 
-**Colors partially applied:**
-- Run `peachy templates validate` to check for template errors
-- Check `~/.config/peachy/scripts/vscode-apply.sh` was generated
-
-**Backup created warning:**
-- Your `settings.json` had invalid JSON
-- Check `settings.json.backup` if you need to recover settings
-
-## Customization
-
-Edit `apply-theme.sh` to customize which colors are applied. The script uses shell variables that reference Peachy's template variables with `.strip` modifier (removes `#` prefix):
-
-```bash
-black="{black.strip}"
-red="{red.strip}"
-# etc.
-```
-
-You can modify the `ui_colors` and `syntax_colors` heredocs to add, remove, or change color mappings.
+**Template not processing:**
+- Verify VS Code is installed: `which code`
+- Run `peachy templates validate`

@@ -1,3 +1,0 @@
-#!/bin/bash
-# Post-apply script for VS Code theme
-bash ~/.config/peachy/scripts/vscode-apply.sh

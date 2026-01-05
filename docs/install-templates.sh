@@ -145,7 +145,7 @@ download_template() {
         rofi) files+=("colors.rasi") ;;
         swayosd) files+=("style.css") ;;
         vencord) files+=("peachy.theme.css") ;;
-        vscode) files+=("apply-theme.sh" "post-apply") ;;
+        vscode) files+=("package.json" "peachy-color-theme.json") ;;
         walker) files+=("colors.css") ;;
         warp) files+=("peachy.yaml") ;;
         waybar) files+=("colors.css" "post-apply") ;;

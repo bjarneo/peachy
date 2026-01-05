@@ -1,0 +1,91 @@
+name: Release Binaries
+on:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+  packages: write
+jobs:
+  build:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            goos: linux
+            goarch: amd64
+          - os: linux
+            arch: arm64
+            goos: linux
+            goarch: arm64
+          - os: darwin
+            arch: amd64
+            goos: darwin
+            goarch: amd64
+          - os: darwin
+            arch: arm64
+            goos: darwin
+            goarch: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          go build -v -ldflags="-X main.version=${VERSION}" -o peachy-${{ matrix.os }}-${{ matrix.arch }}
+          chmod +x peachy-${{ matrix.os }}-${{ matrix.arch }}
+      - name: Generate SHA-256
+        run: |
+          sha256sum peachy-${{ matrix.os }}-${{ matrix.arch }} > peachy-${{ matrix.os }}-${{ matrix.arch }}.sha256
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            peachy-${{ matrix.os }}-${{ matrix.arch }}
+            peachy-${{ matrix.os }}-${{ matrix.arch }}.sha256
+          retention-days: 1
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binaries-*
+          merge-multiple: true
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          
+          # Create release notes
+          echo "Release $VERSION" > release_notes.md
+          echo "" >> release_notes.md
+          echo "## SHA-256 Checksums" >> release_notes.md
+          echo '```' >> release_notes.md
+          cat *.sha256 >> release_notes.md
+          echo '```' >> release_notes.md
+          # Create release using gh cli
+          gh release create "$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "peachy $VERSION" \
+            --notes-file release_notes.md \
+            peachy-*

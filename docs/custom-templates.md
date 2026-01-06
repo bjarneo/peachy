@@ -153,7 +153,14 @@ This way, Linux-specific templates won't cause errors on macOS and vice versa.
 ## CLI Commands
 
 ```bash
-# List all custom templates and their status
+# List available templates from the repository
+peachy templates available
+
+# Install templates from the repository
+peachy templates install kitty alacritty neovim
+peachy templates install --all
+
+# List installed custom templates and their status
 peachy templates list
 
 # Validate templates (check for errors)
@@ -169,17 +176,22 @@ peachy templates apply --dry-run
 peachy templates init
 ```
 
-## Installing Examples
+## Installing Templates
 
-Copy example templates from the Peachy repository:
+Install pre-made templates directly from the Peachy repository:
 
 ```bash
-# Copy all examples
-cp -r /path/to/peachy/examples/templates/* ~/.config/peachy/templates/
+# See what templates are available
+peachy templates available
 
-# Or copy specific ones
-cp -r /path/to/peachy/examples/templates/kitty ~/.config/peachy/templates/
+# Install specific templates
+peachy templates install kitty alacritty neovim
+
+# Install all available templates for your platform
+peachy templates install --all
 ```
+
+Templates are automatically filtered by platform - Linux-only templates (like Hyprland, Waybar) won't appear on macOS, and macOS-only templates (like iTerm2) won't appear on Linux.
 
 ## Next Steps
 

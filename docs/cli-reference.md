@@ -83,8 +83,11 @@ peachy --help                             # Show help
 ## Template Commands
 
 ```bash
-peachy templates list       # List installed templates
-peachy templates validate   # Check templates for errors
-peachy templates apply      # Apply templates manually
-peachy templates init       # Create templates directory
+peachy templates available              # List templates available for installation
+peachy templates install kitty neovim   # Install specific templates
+peachy templates install --all          # Install all available templates
+peachy templates list                   # List installed templates
+peachy templates validate               # Check templates for errors
+peachy templates apply --theme mytheme  # Apply templates with a theme
+peachy templates init                   # Create templates directory
 ```

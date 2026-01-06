@@ -163,6 +163,30 @@ var templatesInitCmd = &cobra.Command{
 	RunE:  runTemplatesInit,
 }
 
+var templatesInstallCmd = &cobra.Command{
+	Use:   "install [templates...]",
+	Short: "Install templates from repository",
+	Long: `Download and install templates from the Peachy repository.
+
+You can install specific templates by name or use --all to install all
+templates available for your platform.
+
+Examples:
+  peachy templates install kitty alacritty
+  peachy templates install --all
+  peachy templates install --list`,
+	RunE: runTemplatesInstall,
+}
+
+var templatesAvailableCmd = &cobra.Command{
+	Use:     "available",
+	Aliases: []string{"avail"},
+	Short:   "List templates available for installation",
+	Long:    `Show all templates available to install from the repository.`,
+	Args:    cobra.NoArgs,
+	RunE:    runTemplatesAvailable,
+}
+
 var (
 	// Root command flags
 	flagConfig string
@@ -178,6 +202,9 @@ var (
 	// Templates command flags
 	flagTemplateTheme   string
 	flagTemplatesDryRun bool
+
+	// Templates install flags
+	flagInstallAll bool
 )
 
 func init() {
@@ -205,10 +232,13 @@ func init() {
 	// Templates command and subcommands
 	templatesApplyCmd.Flags().StringVarP(&flagTemplateTheme, "theme", "t", "", "theme to use for template variables")
 	templatesApplyCmd.Flags().BoolVar(&flagTemplatesDryRun, "dry-run", false, "show what would be done without making changes")
+	templatesInstallCmd.Flags().BoolVarP(&flagInstallAll, "all", "a", false, "install all available templates")
 	templatesCmd.AddCommand(templatesListCmd)
 	templatesCmd.AddCommand(templatesValidateCmd)
 	templatesCmd.AddCommand(templatesApplyCmd)
 	templatesCmd.AddCommand(templatesInitCmd)
+	templatesCmd.AddCommand(templatesInstallCmd)
+	templatesCmd.AddCommand(templatesAvailableCmd)
 	rootCmd.AddCommand(templatesCmd)
 }
 
@@ -577,6 +607,95 @@ func runTemplatesInit(cmd *cobra.Command, args []string) error {
 	fmt.Println("  2. Add template.toml with file mappings")
 	fmt.Println("  3. Add template files with {color} variables")
 	fmt.Println("  4. (Optional) Add executable post-apply script")
+
+	return nil
+}
+
+func runTemplatesInstall(cmd *cobra.Command, args []string) error {
+	var toInstall []string
+
+	if flagInstallAll {
+		// Install all available templates
+		available := templates.GetAvailableTemplates()
+		for _, t := range available {
+			toInstall = append(toInstall, t.Name)
+		}
+	} else if len(args) > 0 {
+		// Install specified templates
+		toInstall = args
+	} else {
+		// No templates specified, show help
+		fmt.Println("Usage: peachy templates install [templates...] or --all")
+		fmt.Println("\nAvailable templates:")
+		for _, t := range templates.GetAvailableTemplates() {
+			status := "  "
+			if templates.IsTemplateInstalled(t.Name) {
+				status = "✓ "
+			}
+			fmt.Printf("  %s%-12s  %s\n", status, t.Name, t.Description)
+		}
+		fmt.Println("\nExamples:")
+		fmt.Println("  peachy templates install kitty alacritty")
+		fmt.Println("  peachy templates install --all")
+		return nil
+	}
+
+	if len(toInstall) == 0 {
+		fmt.Println("No templates to install.")
+		return nil
+	}
+
+	fmt.Printf("Installing %d template(s)...\n\n", len(toInstall))
+
+	var installed, failed int
+	for _, name := range toInstall {
+		fmt.Printf("  Installing %-12s ... ", name)
+
+		if err := templates.InstallTemplate(name); err != nil {
+			fmt.Printf("failed (%s)\n", err)
+			failed++
+		} else {
+			fmt.Println("done")
+			installed++
+		}
+	}
+
+	fmt.Printf("\nInstalled %d template(s)", installed)
+	if failed > 0 {
+		fmt.Printf(", %d failed", failed)
+	}
+	fmt.Println()
+
+	fmt.Printf("\nTemplates installed to: %s\n", templates.GetTemplatesDir())
+	fmt.Println("\nTo apply templates with a theme, run:")
+	fmt.Println("  peachy templates apply --theme <themename>")
+
+	return nil
+}
+
+func runTemplatesAvailable(cmd *cobra.Command, args []string) error {
+	available := templates.GetAvailableTemplates()
+
+	if len(available) == 0 {
+		fmt.Println("No templates available for your platform.")
+		return nil
+	}
+
+	fmt.Println("Available templates:")
+	fmt.Println()
+
+	for _, t := range available {
+		status := "[ ]"
+		if templates.IsTemplateInstalled(t.Name) {
+			status = "[✓]"
+		}
+		fmt.Printf("  %s %-12s  %s\n", status, t.Name, t.Description)
+	}
+
+	fmt.Printf("\n%d template(s) available\n", len(available))
+	fmt.Println("\nTo install templates:")
+	fmt.Println("  peachy templates install <name> [name...]")
+	fmt.Println("  peachy templates install --all")
 
 	return nil
 }

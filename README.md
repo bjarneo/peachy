@@ -10,6 +10,9 @@
 
 ---
 
+https://github.com/user-attachments/assets/c5358ed9-cf0b-4d13-9c46-45b67f5003cd
+
+
 ## Why Peachy?
 
 Ever found the perfect wallpaper but couldn't get your terminal colors to match? Peachy extracts dominant colors from any image using ImageMagick, intelligently assigns them to ANSI color roles, and lets you tweak each one until it's *just right*.

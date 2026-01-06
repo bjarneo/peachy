@@ -5,4 +5,4 @@ condition = "ghostty"
 
 [[files]]
 template = "colors.conf"
-destination = "~/.config/ghostty/peachy-colors"
+destination = "~/.config/ghostty/themes/peachy"

@@ -17,15 +17,7 @@ const (
 
 // GetGeneratedTemplatesDir returns the directory for processed template files
 func GetGeneratedTemplatesDir() string {
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return ""
-		}
-		configHome = filepath.Join(home, ".config")
-	}
-	return filepath.Join(configHome, "peachy", GeneratedTemplatesDir)
+	return filepath.Join(getConfigDir(), GeneratedTemplatesDir)
 }
 
 // expandPath expands ~ to home directory

@@ -671,43 +671,7 @@ func (m Model) renderLayout(left, right string) string {
 	content := lipgloss.JoinHorizontal(lipgloss.Top, left, "  ", right)
 
 	// Status bar
-	var statusContent string
-	statusBarStyle := lipgloss.NewStyle().Padding(0, 1)
-
-	switch m.status.Type {
-	case shared.StatusError:
-		errorIcon := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("1")).
-			Bold(true).
-			Render("● ")
-		statusContent = statusBarStyle.
-			BorderLeft(true).
-			BorderStyle(lipgloss.ThickBorder()).
-			BorderForeground(lipgloss.Color("1")).
-			Render(errorIcon + ErrorStyle.Render(m.status.Message))
-	case shared.StatusSuccess:
-		successIcon := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("2")).
-			Bold(true).
-			Render("✓ ")
-		statusContent = statusBarStyle.
-			BorderLeft(true).
-			BorderStyle(lipgloss.ThickBorder()).
-			BorderForeground(lipgloss.Color("2")).
-			Render(successIcon + SuccessStyle.Render(m.status.Message))
-	case shared.StatusInfo:
-		infoIcon := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("6")).
-			Bold(true).
-			Render("● ")
-		statusContent = statusBarStyle.
-			BorderLeft(true).
-			BorderStyle(lipgloss.ThickBorder()).
-			BorderForeground(lipgloss.Color("6")).
-			Render(infoIcon + lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(m.status.Message))
-	default:
-		statusContent = statusBarStyle.Render(StatusStyle.Render(m.status.Message))
-	}
+	statusContent := renderStatusBar(m.status)
 
 	// Help bar
 	helpBar := m.renderHelpBar()
@@ -723,6 +687,44 @@ func (m Model) renderLayout(left, right string) string {
 		statusContent,
 		helpBar,
 	)
+}
+
+// renderStatusBar creates a styled status bar based on status type
+func renderStatusBar(status shared.Status) string {
+	baseStyle := lipgloss.NewStyle().Padding(0, 1)
+
+	// Map status type to color and icon
+	var color string
+	var icon string
+	var textStyle lipgloss.Style
+
+	switch status.Type {
+	case shared.StatusError:
+		color = "1" // Red
+		icon = "● "
+		textStyle = ErrorStyle
+	case shared.StatusSuccess:
+		color = "2" // Green
+		icon = "✓ "
+		textStyle = SuccessStyle
+	case shared.StatusInfo:
+		color = "6" // Cyan
+		icon = "● "
+		textStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	default:
+		return baseStyle.Render(StatusStyle.Render(status.Message))
+	}
+
+	iconStyled := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(color)).
+		Bold(true).
+		Render(icon)
+
+	return baseStyle.
+		BorderLeft(true).
+		BorderStyle(lipgloss.ThickBorder()).
+		BorderForeground(lipgloss.Color(color)).
+		Render(iconStyled + textStyle.Render(status.Message))
 }
 
 func (m Model) renderHelpBar() string {

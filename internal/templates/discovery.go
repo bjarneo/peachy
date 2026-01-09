@@ -15,8 +15,8 @@ const (
 	PostApplyFile = "post-apply"
 )
 
-// GetTemplatesDir returns the user's custom templates directory
-func GetTemplatesDir() string {
+// getConfigDir returns the peachy config directory (XDG compliant)
+func getConfigDir() string {
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if configHome == "" {
 		home, err := os.UserHomeDir()
@@ -25,7 +25,12 @@ func GetTemplatesDir() string {
 		}
 		configHome = filepath.Join(home, ".config")
 	}
-	return filepath.Join(configHome, "peachy", TemplatesDir)
+	return filepath.Join(configHome, "peachy")
+}
+
+// GetTemplatesDir returns the user's custom templates directory
+func GetTemplatesDir() string {
+	return filepath.Join(getConfigDir(), TemplatesDir)
 }
 
 // EnsureTemplatesDir creates the templates directory if it doesn't exist

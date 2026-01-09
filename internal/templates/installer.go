@@ -134,13 +134,13 @@ func InstallTemplate(name string) error {
 				continue
 			}
 			// Clean up on failure
-			os.RemoveAll(destDir)
+			_ = os.RemoveAll(destDir)
 			return fmt.Errorf("downloading %s: %w", file, err)
 		}
 
 		// Make post-apply executable
 		if file == "post-apply" {
-			os.Chmod(destPath, 0755)
+			_ = os.Chmod(destPath, 0755)
 		}
 	}
 
@@ -162,7 +162,7 @@ func downloadFile(url, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d", resp.StatusCode)
@@ -172,7 +172,7 @@ func downloadFile(url, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, resp.Body)
 	return err

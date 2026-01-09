@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"peachy/internal/cache"
@@ -690,7 +691,7 @@ func (f FilePicker) renderPreview() string {
 					Foreground(lipgloss.Color("8")).
 					Render("Size: ") + lipgloss.NewStyle().
 					Foreground(lipgloss.Color("7")).
-					Render(strings.TrimSpace(strings.Join([]string{intToString(w), "x", intToString(h)}, "")))))
+					Render(strconv.Itoa(w)+"x"+strconv.Itoa(h))))
 				sb.WriteString("\n\n")
 			}
 		}
@@ -718,24 +719,4 @@ func (f FilePicker) renderPreview() string {
 		Height(f.previewHeight)
 
 	return borderStyle.Render(sb.String())
-}
-
-// intToString converts an integer to string without importing strconv
-func intToString(i int) string {
-	if i == 0 {
-		return "0"
-	}
-	var result []byte
-	negative := i < 0
-	if negative {
-		i = -i
-	}
-	for i > 0 {
-		result = append([]byte{byte('0' + i%10)}, result...)
-		i /= 10
-	}
-	if negative {
-		result = append([]byte{'-'}, result...)
-	}
-	return string(result)
 }

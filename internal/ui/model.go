@@ -614,60 +614,126 @@ func (m Model) renderMainWithEditor() string {
 
 func (m Model) renderSaveThemeDialog() string {
 	var sb strings.Builder
-	sb.WriteString("\n")
-	sb.WriteString(HeaderStyle.Render("Save Theme"))
+
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("13"))
+
+	inputStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("15")).
+		Bold(true)
+
+	cursorStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("13")).
+		Bold(true)
+
+	sb.WriteString(titleStyle.Render("Save Theme"))
 	sb.WriteString("\n\n")
-	sb.WriteString("Theme name: ")
-	sb.WriteString(m.themeNameInput)
-	sb.WriteString("█")
+	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render("Name: "))
+	sb.WriteString(inputStyle.Render(m.themeNameInput))
+	sb.WriteString(cursorStyle.Render("█"))
 	sb.WriteString("\n\n")
-	sb.WriteString(HelpDescStyle.Render("Enter: save  Esc: cancel"))
-	return sb.String()
+
+	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true)
+	sb.WriteString(keyStyle.Render("Enter"))
+	sb.WriteString(helpStyle.Render(" save  "))
+	sb.WriteString(keyStyle.Render("Esc"))
+	sb.WriteString(helpStyle.Render(" cancel"))
+
+	borderStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("5")).
+		Padding(1, 2).
+		Width(40)
+
+	return borderStyle.Render(sb.String())
 }
 
 func (m Model) renderThemeBrowser() string {
 	var sb strings.Builder
 
-	sb.WriteString(HeaderStyle.Render("Peachy - Theme Browser"))
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("13"))
+
+	sb.WriteString(titleStyle.Render("Themes"))
+	sb.WriteString("\n")
+	sb.WriteString(lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8")).
+		Render(strings.Repeat("─", 36)))
 	sb.WriteString("\n\n")
 
 	if len(m.themes) == 0 {
-		sb.WriteString("No themes found.\n")
+		sb.WriteString(lipgloss.NewStyle().
+			Foreground(lipgloss.Color("8")).
+			Italic(true).
+			Render("No themes saved yet"))
+		sb.WriteString("\n")
 	} else {
 		for i, theme := range m.themes {
 			if i == m.themeCursor {
-				sb.WriteString("> ")
-				sb.WriteString(HeaderStyle.Render(theme))
+				indicator := lipgloss.NewStyle().
+					Foreground(lipgloss.Color("13")).
+					Bold(true).
+					Render("▍")
+				name := lipgloss.NewStyle().
+					Foreground(lipgloss.Color("15")).
+					Bold(true).
+					Render(theme)
+				sb.WriteString(indicator + " " + name)
 			} else {
-				sb.WriteString("  ")
-				sb.WriteString(theme)
+				sb.WriteString("  " + lipgloss.NewStyle().
+					Foreground(lipgloss.Color("7")).
+					Render(theme))
 			}
 			sb.WriteString("\n")
 		}
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(HelpDescStyle.Render("j/k: navigate  Enter: load  a: apply  Esc: cancel"))
-	return sb.String()
+
+	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true)
+	sb.WriteString(keyStyle.Render("j/k"))
+	sb.WriteString(helpStyle.Render(" nav  "))
+	sb.WriteString(keyStyle.Render("Enter"))
+	sb.WriteString(helpStyle.Render(" load  "))
+	sb.WriteString(keyStyle.Render("a"))
+	sb.WriteString(helpStyle.Render(" apply  "))
+	sb.WriteString(keyStyle.Render("Esc"))
+	sb.WriteString(helpStyle.Render(" back"))
+
+	borderStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("5")).
+		Padding(1, 2).
+		Width(40)
+
+	return borderStyle.Render(sb.String())
 }
 
 func (m Model) renderLayout(left, right string) string {
-	// Build header
-	headerTitle := HeaderStyle.Render("Peachy - Theme Creator")
+	// Header: app name + mode badge
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("13")).
+		Render("peachy")
 
-	// Build subtitle line (filename + mode)
-	var subtitleParts []string
-	if m.imagePath != "" {
-		subtitleParts = append(subtitleParts, filepath.Base(m.imagePath))
-	}
-	modeLabel := "[" + color.ModeNames[m.extractionMode] + "]"
+	modeBadge := BadgeStyle.Render(color.ModeNames[m.extractionMode])
 	if m.lightMode {
-		modeLabel += " (light)"
+		modeBadge += " " + BadgeMutedStyle.Render("light")
 	}
-	subtitleParts = append(subtitleParts, modeLabel)
-	subtitleText := SubtitleStyle.Render(strings.Join(subtitleParts, "  "))
 
-	// Main content - side by side (same as FilePicker)
+	headerLine := title + "  " + modeBadge
+
+	// Subtitle: image filename
+	var subtitle string
+	if m.imagePath != "" {
+		subtitle = SubtitleStyle.Render(filepath.Base(m.imagePath))
+	}
+
+	// Main content - side by side
 	content := lipgloss.JoinHorizontal(lipgloss.Top, left, "  ", right)
 
 	// Status bar
@@ -676,17 +742,13 @@ func (m Model) renderLayout(left, right string) string {
 	// Help bar
 	helpBar := m.renderHelpBar()
 
-	// Compose everything vertically using lipgloss
-	return lipgloss.JoinVertical(lipgloss.Left,
-		"",
-		headerTitle,
-		subtitleText,
-		"",
-		content,
-		"",
-		statusContent,
-		helpBar,
-	)
+	parts := []string{"", headerLine}
+	if subtitle != "" {
+		parts = append(parts, subtitle)
+	}
+	parts = append(parts, "", content, "", statusContent, helpBar)
+
+	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
 // renderStatusBar creates a styled status bar based on status type

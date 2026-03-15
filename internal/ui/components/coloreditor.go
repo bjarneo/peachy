@@ -144,7 +144,6 @@ func (e ColorEditor) updateSliderMode(msg tea.KeyMsg) (ColorEditor, tea.Cmd) {
 func (e ColorEditor) updateHexMode(msg tea.KeyMsg) (ColorEditor, tea.Cmd) {
 	switch msg.String() {
 	case "enter":
-		// Try to parse hex input
 		if col, err := color.NewColorFromHex(e.hexInput); err == nil {
 			e.current = col
 		}
@@ -157,7 +156,6 @@ func (e ColorEditor) updateHexMode(msg tea.KeyMsg) (ColorEditor, tea.Cmd) {
 			e.hexInput = e.hexInput[:len(e.hexInput)-1]
 		}
 	default:
-		// Only allow hex characters
 		char := msg.String()
 		if len(char) == 1 && strings.ContainsAny(char, "0123456789abcdefABCDEF#") {
 			if len(e.hexInput) < 7 {
@@ -192,97 +190,159 @@ func (e ColorEditor) View() string {
 
 	var sb strings.Builder
 
-	// Title - using ANSI colors
+	// Title with role name
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("13")) // Bright Magenta
+		Foreground(lipgloss.Color("13"))
 
 	roleName := color.RoleNames[color.ColorRole(e.colorIndex)]
-	sb.WriteString(titleStyle.Render(fmt.Sprintf("Edit Color %d (%s)", e.colorIndex, roleName)))
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("Edit: %s", roleName)))
+	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render(fmt.Sprintf("  (color %d)", e.colorIndex)))
 	sb.WriteString("\n\n")
 
-	// Color preview
-	previewStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color(e.current.Hex)).
-		Width(e.width - 6).
+	// Side-by-side original vs current preview
+	previewWidth := (e.width - 10) / 2
+	if previewWidth < 10 {
+		previewWidth = 10
+	}
+
+	origBox := lipgloss.NewStyle().
+		Background(lipgloss.Color(e.original.Hex)).
+		Width(previewWidth).
 		Height(2).
 		Align(lipgloss.Center)
-	sb.WriteString(previewStyle.Render(" "))
+	currBox := lipgloss.NewStyle().
+		Background(lipgloss.Color(e.current.Hex)).
+		Width(previewWidth).
+		Height(2).
+		Align(lipgloss.Center)
+
+	origLabel := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8")).
+		Width(previewWidth).
+		Align(lipgloss.Center).
+		Render("original")
+	currLabel := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("13")).
+		Bold(true).
+		Width(previewWidth).
+		Align(lipgloss.Center).
+		Render("current")
+
+	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top,
+		origBox.Render(" "),
+		" ",
+		currBox.Render(" "),
+	))
+	sb.WriteString("\n")
+	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top,
+		origLabel,
+		" ",
+		currLabel,
+	))
 	sb.WriteString("\n\n")
 
-	// HSL sliders - using ANSI colors
+	// HSL sliders
 	labelStyle := lipgloss.NewStyle().
-		Width(12).
-		Foreground(lipgloss.Color("8")) // Bright Black
+		Width(5).
+		Foreground(lipgloss.Color("8"))
 
-	activeStyle := lipgloss.NewStyle().
-		Width(12).
-		Foreground(lipgloss.Color("13")). // Bright Magenta
+	activeLabel := lipgloss.NewStyle().
+		Width(5).
+		Foreground(lipgloss.Color("13")).
 		Bold(true)
 
 	valueStyle := lipgloss.NewStyle().
-		Width(8).
-		Foreground(lipgloss.Color("7")) // White
+		Width(7).
+		Foreground(lipgloss.Color("7")).
+		Align(lipgloss.Right)
 
-	// Hue
-	hueLabel := labelStyle
-	if e.activeField == FieldHue && !e.hexMode {
-		hueLabel = activeStyle
+	type sliderInfo struct {
+		label string
+		value float64
+		max   float64
+		field EditorField
 	}
-	sb.WriteString(hueLabel.Render("Hue"))
-	sb.WriteString(valueStyle.Render(fmt.Sprintf("%.0f°", e.current.HSL.H)))
-	sb.WriteString(e.renderSlider(e.current.HSL.H, 360, e.activeField == FieldHue && !e.hexMode))
+
+	sliders := []sliderInfo{
+		{"H", e.current.HSL.H, 360, FieldHue},
+		{"S", e.current.HSL.S, 100, FieldSaturation},
+		{"L", e.current.HSL.L, 100, FieldLightness},
+	}
+
+	for _, s := range sliders {
+		active := e.activeField == s.field && !e.hexMode
+
+		lbl := labelStyle
+		if active {
+			lbl = activeLabel
+		}
+
+		var valStr string
+		if s.field == FieldHue {
+			valStr = fmt.Sprintf("%.0f°", s.value)
+		} else {
+			valStr = fmt.Sprintf("%.0f%%", s.value)
+		}
+
+		sb.WriteString(lbl.Render(s.label))
+		sb.WriteString(valueStyle.Render(valStr))
+		sb.WriteString(" ")
+		sb.WriteString(e.renderSlider(s.value, s.max, active))
+		sb.WriteString("\n")
+	}
+
 	sb.WriteString("\n")
-
-	// Saturation
-	satLabel := labelStyle
-	if e.activeField == FieldSaturation && !e.hexMode {
-		satLabel = activeStyle
-	}
-	sb.WriteString(satLabel.Render("Saturation"))
-	sb.WriteString(valueStyle.Render(fmt.Sprintf("%.0f%%", e.current.HSL.S)))
-	sb.WriteString(e.renderSlider(e.current.HSL.S, 100, e.activeField == FieldSaturation && !e.hexMode))
-	sb.WriteString("\n")
-
-	// Lightness
-	lightLabel := labelStyle
-	if e.activeField == FieldLightness && !e.hexMode {
-		lightLabel = activeStyle
-	}
-	sb.WriteString(lightLabel.Render("Lightness"))
-	sb.WriteString(valueStyle.Render(fmt.Sprintf("%.0f%%", e.current.HSL.L)))
-	sb.WriteString(e.renderSlider(e.current.HSL.L, 100, e.activeField == FieldLightness && !e.hexMode))
-	sb.WriteString("\n\n")
 
 	// Hex input
 	hexLabel := labelStyle
 	if e.hexMode {
-		hexLabel = activeStyle
+		hexLabel = activeLabel
 	}
 	sb.WriteString(hexLabel.Render("Hex"))
 	if e.hexMode {
 		sb.WriteString(lipgloss.NewStyle().
-			Foreground(lipgloss.Color("13")). // Bright Magenta
+			Foreground(lipgloss.Color("13")).
+			Bold(true).
 			Render(e.hexInput + "█"))
 	} else {
-		sb.WriteString(valueStyle.Render(e.current.Hex))
+		sb.WriteString(lipgloss.NewStyle().
+			Foreground(lipgloss.Color("7")).
+			Render("  " + e.current.Hex))
 	}
+
+	// RGB values
+	sb.WriteString(lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8")).
+		Render(fmt.Sprintf("  R:%d G:%d B:%d", e.current.RGB.R, e.current.RGB.G, e.current.RGB.B)))
+
 	sb.WriteString("\n\n")
 
-	// Help
+	// Contextual help
 	helpStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")) // Bright Black
+		Foreground(lipgloss.Color("8"))
 
 	if e.hexMode {
-		sb.WriteString(helpStyle.Render("Type hex value • Enter: confirm • Esc: cancel"))
+		sb.WriteString(helpStyle.Render("Type hex value"))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render("  "))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true).Render("Enter"))
+		sb.WriteString(helpStyle.Render(" confirm  "))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true).Render("Esc"))
+		sb.WriteString(helpStyle.Render(" cancel"))
 	} else {
-		sb.WriteString(helpStyle.Render("h/l: adjust • H/L: big adjust • #: hex input • u: reset"))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true).Render("h/l"))
+		sb.WriteString(helpStyle.Render(" adjust  "))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true).Render("H/L"))
+		sb.WriteString(helpStyle.Render(" big  "))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true).Render("#"))
+		sb.WriteString(helpStyle.Render(" hex  "))
+		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true).Render("u"))
+		sb.WriteString(helpStyle.Render(" reset"))
 	}
 
-	// Border - using ANSI colors
 	borderStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("5")). // Magenta
+		BorderForeground(lipgloss.Color("5")).
 		Padding(1).
 		Width(e.width)
 
@@ -290,19 +350,33 @@ func (e ColorEditor) View() string {
 }
 
 func (e ColorEditor) renderSlider(value, max float64, active bool) string {
-	width := 20
+	width := e.width - 20
+	if width < 12 {
+		width = 12
+	}
+	if width > 25 {
+		width = 25
+	}
+
 	filled := int((value / max) * float64(width))
 	if filled > width {
 		filled = width
 	}
 
-	// Using ANSI colors
-	track := lipgloss.NewStyle().Foreground(lipgloss.Color("8")) // Bright Black
-	fill := lipgloss.NewStyle().Foreground(lipgloss.Color("5"))  // Magenta
+	track := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	fill := lipgloss.NewStyle().Foreground(lipgloss.Color("5"))
 	if active {
-		fill = lipgloss.NewStyle().Foreground(lipgloss.Color("13")) // Bright Magenta
+		fill = lipgloss.NewStyle().Foreground(lipgloss.Color("13"))
 	}
 
-	return fill.Render(strings.Repeat("█", filled)) +
-		track.Render(strings.Repeat("░", width-filled))
+	// Use half-block for the cursor position to show exact value
+	var slider string
+	if filled > 0 {
+		slider = fill.Render(strings.Repeat("━", filled))
+	}
+	if filled < width {
+		slider += track.Render(strings.Repeat("─", width-filled))
+	}
+
+	return slider
 }

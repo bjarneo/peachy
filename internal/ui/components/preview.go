@@ -1,6 +1,7 @@
 package components
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -55,27 +56,21 @@ func (p *Preview) updateImagePreview() {
 		return
 	}
 
-	// Reserve space for the color swatches and sample (about 12 lines)
-	// Use remaining space for image
 	imageHeight := (p.height - 16) / 2
 	if imageHeight < 3 {
 		imageHeight = 3
 	}
 
-	// Always use cached thumbnail for efficiency
 	var preview string
 	var err error
 
 	if p.thumbnailCache != nil {
-		// Get or create thumbnail - always use the smaller cached version
 		thumbPath, thumbErr := p.thumbnailCache.GetOrCreateThumbnail(p.imagePath)
 		if thumbErr == nil && thumbPath != "" {
-			// Use cached thumbnail (200x200 max) - much faster to render
 			preview, err = terminal.RenderImageFit(thumbPath, p.width-6, imageHeight)
 		}
 	}
 
-	// Only fall back to original if thumbnail cache is not available
 	if preview == "" || err != nil {
 		preview, err = terminal.RenderImageFit(p.imagePath, p.width-6, imageHeight)
 	}
@@ -98,32 +93,45 @@ func (p *Preview) SetSize(w, h int) {
 func (p Preview) View() string {
 	var sb strings.Builder
 
-	// Header - using ANSI colors
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("12")). // Bright Blue
-		MarginBottom(1)
+		Foreground(lipgloss.Color("12"))
+
 	sb.WriteString(titleStyle.Render("PREVIEW"))
 	sb.WriteString("\n")
-	sb.WriteString(strings.Repeat("─", p.width-4))
+
+	divider := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8")).
+		Render(strings.Repeat("─", p.width-4))
+	sb.WriteString(divider)
 	sb.WriteString("\n")
 
-	// Image preview (if available)
+	// Image preview
 	if p.showImage && p.imagePreview != "" {
 		infoStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("8")) // Bright Black
-		sb.WriteString(infoStyle.Render("Source: " + filepath.Base(p.imagePath)))
+			Foreground(lipgloss.Color("8"))
+		sb.WriteString(infoStyle.Render(filepath.Base(p.imagePath)))
 		sb.WriteString("\n")
 		sb.WriteString(p.imagePreview)
 	}
 
-	// Color grid - Normal colors
-	sb.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")). // Bright Black
-		Render("Normal:"))
+	// Paired color grid — normal and bright side by side
+	labelStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8")).
+		Bold(true)
+
+	sb.WriteString(labelStyle.Render("Colors"))
 	sb.WriteString("\n")
 
-	// First row (0-7)
+	// Labels row
+	names := []string{"BLK", "RED", "GRN", "YEL", "BLU", "MAG", "CYN", "WHT"}
+	labelRow := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	for _, n := range names {
+		sb.WriteString(labelRow.Render(fmt.Sprintf("%-4s", n)))
+	}
+	sb.WriteString("\n")
+
+	// Normal row (0-7)
 	for i := 0; i < 8; i++ {
 		col := p.palette.GetColor(i)
 		swatch := lipgloss.NewStyle().
@@ -131,15 +139,9 @@ func (p Preview) View() string {
 			Render("    ")
 		sb.WriteString(swatch)
 	}
-	sb.WriteString("\n\n")
-
-	// Bright colors
-	sb.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")). // Bright Black
-		Render("Bright:"))
 	sb.WriteString("\n")
 
-	// Second row (8-15)
+	// Bright row (8-15)
 	for i := 8; i < 16; i++ {
 		col := p.palette.GetColor(i)
 		swatch := lipgloss.NewStyle().
@@ -149,79 +151,104 @@ func (p Preview) View() string {
 	}
 	sb.WriteString("\n\n")
 
-	// Sample text preview
-	bgColor := p.palette.Background.Hex
-	fgColor := p.palette.Foreground.Hex
-
-	previewBg := lipgloss.NewStyle().
-		Background(lipgloss.Color(bgColor)).
-		Foreground(lipgloss.Color(fgColor)).
-		Padding(1).
-		Width(p.width - 6)
-
-	sb.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")). // Bright Black
-		Render("Sample:"))
+	// Syntax-highlighted code preview
+	sb.WriteString(labelStyle.Render("Syntax Preview"))
 	sb.WriteString("\n")
 
-	// Build sample text with colors
-	var sample strings.Builder
-	sample.WriteString("Hello, World!\n")
+	sb.WriteString(p.renderCodePreview())
+	sb.WriteString("\n")
 
-	// Show some colored text
-	sample.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color(p.palette.GetColor(1).Hex)).
-		Render("Error"))
-	sample.WriteString(" ")
-	sample.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color(p.palette.GetColor(2).Hex)).
-		Render("Success"))
-	sample.WriteString(" ")
-	sample.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color(p.palette.GetColor(3).Hex)).
-		Render("Warning"))
-	sample.WriteString("\n")
-
-	sample.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color(p.palette.GetColor(4).Hex)).
-		Render("Info"))
-	sample.WriteString(" ")
-	sample.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color(p.palette.GetColor(5).Hex)).
-		Render("Debug"))
-	sample.WriteString(" ")
-	sample.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color(p.palette.GetColor(6).Hex)).
-		Render("Trace"))
-
-	sb.WriteString(previewBg.Render(sample.String()))
-	sb.WriteString("\n\n")
-
-	// Foreground/Background info - using ANSI colors
+	// FG/BG info
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")) // Bright Black
+		Foreground(lipgloss.Color("8"))
 
 	fgSwatch := lipgloss.NewStyle().
-		Background(lipgloss.Color(fgColor)).
+		Background(lipgloss.Color(p.palette.Foreground.Hex)).
 		Render("  ")
 	bgSwatch := lipgloss.NewStyle().
-		Background(lipgloss.Color(bgColor)).
+		Background(lipgloss.Color(p.palette.Background.Hex)).
 		Render("  ")
 
-	sb.WriteString(infoStyle.Render("FG: "))
+	sb.WriteString(infoStyle.Render("FG "))
 	sb.WriteString(fgSwatch)
-	sb.WriteString(" " + fgColor)
-	sb.WriteString("\n")
-	sb.WriteString(infoStyle.Render("BG: "))
+	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render(" " + p.palette.Foreground.Hex))
+	sb.WriteString("   ")
+	sb.WriteString(infoStyle.Render("BG "))
 	sb.WriteString(bgSwatch)
-	sb.WriteString(" " + bgColor)
+	sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render(" " + p.palette.Background.Hex))
 
-	// Border - using ANSI colors
 	borderStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("8")). // Bright Black
+		BorderForeground(lipgloss.Color("8")).
 		Padding(1).
 		Width(p.width)
 
 	return borderStyle.Render(sb.String())
+}
+
+// renderCodePreview renders a fake code snippet with syntax highlighting
+// using the palette colors for an instant visual of how the theme looks in an editor
+func (p Preview) renderCodePreview() string {
+	bg := p.palette.Background.Hex
+	fg := p.palette.Foreground.Hex
+
+	// Color helpers using actual palette hex values
+	c := func(idx int, text string) string {
+		return lipgloss.NewStyle().
+			Foreground(lipgloss.Color(p.palette.GetColor(idx).Hex)).
+			Render(text)
+	}
+
+	// Build code lines
+	var lines []string
+
+	// Line 1: comment
+	lines = append(lines, c(8, "// Extract colors from wallpaper"))
+
+	// Line 2: func declaration
+	lines = append(lines, c(4, "func")+" "+c(6, "extract")+"("+c(6, "path")+" "+c(5, "string")+") "+c(5, "Theme")+" {")
+
+	// Line 3: variable assignment with string
+	lines = append(lines, "    "+c(7, "img")+" := "+c(6, "openImage")+"("+c(7, "path")+")")
+
+	// Line 4: variable with number
+	lines = append(lines, "    "+c(7, "colors")+" := "+c(6, "quantize")+"("+c(7, "img")+", "+c(3, "48")+")")
+
+	// Line 5: conditional
+	lines = append(lines, "    "+c(4, "if")+" "+c(7, "len")+"("+c(7, "colors")+") "+c(1, ">")+" "+c(3, "0")+" {")
+
+	// Line 6: string literal
+	lines = append(lines, "        "+c(6, "fmt.Println")+"("+c(2, `"ready"`)+", "+c(11, "true")+")")
+
+	// Line 7: close blocks
+	lines = append(lines, "    }")
+
+	// Line 8: return
+	lines = append(lines, "    "+c(4, "return")+" "+c(5, "Theme")+"{"+c(1, "Name")+": "+c(2, `"peachy"`)+"}")
+
+	// Line 9: close func
+	lines = append(lines, "}")
+
+	// Add line numbers and join
+	lineNumStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.palette.GetColor(8).Hex)).
+		Width(3).
+		Align(lipgloss.Right)
+
+	var codeLines []string
+	for i, line := range lines {
+		num := lineNumStyle.Render(fmt.Sprintf("%d", i+1))
+		codeLines = append(codeLines, num+" "+line)
+	}
+
+	codeContent := strings.Join(codeLines, "\n")
+
+	// Wrap in a background box using the palette's BG/FG
+	codeBox := lipgloss.NewStyle().
+		Background(lipgloss.Color(bg)).
+		Foreground(lipgloss.Color(fg)).
+		Padding(1).
+		Width(p.width - 6)
+
+	return codeBox.Render(codeContent)
 }

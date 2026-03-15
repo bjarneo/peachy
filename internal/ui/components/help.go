@@ -56,115 +56,76 @@ func (h Help) View() string {
 
 	var sb strings.Builder
 
-	// Title - using ANSI colors
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("13")). // Bright Magenta
-		MarginBottom(1)
-	sb.WriteString(titleStyle.Render("Peachy - Keyboard Shortcuts"))
+		Foreground(lipgloss.Color("13"))
+	sb.WriteString(titleStyle.Render("Keyboard Shortcuts"))
 	sb.WriteString("\n\n")
 
-	// Section style - using ANSI colors
 	sectionStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("12")) // Bright Blue
+		Foreground(lipgloss.Color("12"))
 
 	keyStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("3")). // Yellow
-		Width(15)
+		Foreground(lipgloss.Color("3")).
+		Width(14)
 
 	descStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("7")) // White
+		Foreground(lipgloss.Color("7"))
 
-	// Navigation section
-	sb.WriteString(sectionStyle.Render("Navigation"))
-	sb.WriteString("\n")
-	sb.WriteString(strings.Repeat("─", 40))
-	sb.WriteString("\n")
+	divStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8"))
 
-	shortcuts := []struct {
-		key  string
-		desc string
-	}{
-		{"j / Down", "Move down"},
-		{"k / Up", "Move up"},
-		{"g / Home", "Go to first"},
-		{"G / End", "Go to last"},
-		{"Enter", "Edit selected color"},
-	}
-
-	for _, s := range shortcuts {
-		sb.WriteString(keyStyle.Render(s.key))
-		sb.WriteString(descStyle.Render(s.desc))
+	renderSection := func(title string, items []struct{ key, desc string }) {
+		sb.WriteString(sectionStyle.Render(title))
+		sb.WriteString("\n")
+		sb.WriteString(divStyle.Render(strings.Repeat("─", 38)))
+		sb.WriteString("\n")
+		for _, item := range items {
+			sb.WriteString(keyStyle.Render(item.key))
+			sb.WriteString(descStyle.Render(item.desc))
+			sb.WriteString("\n")
+		}
 		sb.WriteString("\n")
 	}
 
-	// Actions section
-	sb.WriteString("\n")
-	sb.WriteString(sectionStyle.Render("Actions"))
-	sb.WriteString("\n")
-	sb.WriteString(strings.Repeat("─", 40))
-	sb.WriteString("\n")
+	renderSection("Navigation", []struct{ key, desc string }{
+		{"j / k", "Move down / up"},
+		{"g / G", "First / last"},
+		{"Enter", "Edit selected color"},
+	})
 
-	actions := []struct {
-		key  string
-		desc string
-	}{
+	renderSection("Actions", []struct{ key, desc string }{
 		{"o", "Open image file picker"},
 		{"e", "Extract colors from image"},
-		{"m", "Cycle extraction mode"},
+		{"m / M", "Cycle extraction mode"},
 		{"t", "Toggle light/dark mode"},
-		{"s", "Save colors.toml"},
-		{"l", "Load colors.toml"},
+		{"s", "Save theme"},
+		{"l", "Load/browse themes"},
+		{"a", "Apply theme to system"},
 		{"r", "Reset to extracted colors"},
-		{"?", "Toggle this help"},
-		{"q / Ctrl+C", "Quit"},
-	}
+		{"q", "Quit"},
+	})
 
-	for _, a := range actions {
-		sb.WriteString(keyStyle.Render(a.key))
-		sb.WriteString(descStyle.Render(a.desc))
-		sb.WriteString("\n")
-	}
-
-	// Color editor section
-	sb.WriteString("\n")
-	sb.WriteString(sectionStyle.Render("Color Editor"))
-	sb.WriteString("\n")
-	sb.WriteString(strings.Repeat("─", 40))
-	sb.WriteString("\n")
-
-	editorKeys := []struct {
-		key  string
-		desc string
-	}{
+	renderSection("Color Editor", []struct{ key, desc string }{
 		{"h / l", "Adjust value (small)"},
 		{"H / L", "Adjust value (large)"},
 		{"j / k", "Select field"},
 		{"#", "Enter hex mode"},
 		{"u", "Reset to original"},
 		{"Enter", "Confirm changes"},
-		{"Esc", "Cancel changes"},
-	}
+		{"Esc", "Cancel"},
+	})
 
-	for _, e := range editorKeys {
-		sb.WriteString(keyStyle.Render(e.key))
-		sb.WriteString(descStyle.Render(e.desc))
-		sb.WriteString("\n")
-	}
-
-	// Footer - using ANSI colors
-	sb.WriteString("\n")
 	footerStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")). // Bright Black
+		Foreground(lipgloss.Color("8")).
 		Italic(true)
 	sb.WriteString(footerStyle.Render("Press ? or Esc to close"))
 
-	// Border - using ANSI colors
 	borderStyle := lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).
-		BorderForeground(lipgloss.Color("5")). // Magenta
+		BorderForeground(lipgloss.Color("5")).
 		Padding(1, 2).
 		Width(h.width)
 

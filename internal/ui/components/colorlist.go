@@ -119,83 +119,98 @@ func (c ColorList) Update(msg tea.Msg) (ColorList, tea.Cmd) {
 func (c ColorList) View() string {
 	var sb strings.Builder
 
-	// Header - using ANSI colors
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("12")). // Bright Blue
-		MarginBottom(1)
-	sb.WriteString(titleStyle.Render("COLORS"))
-	sb.WriteString("\n")
-	sb.WriteString(strings.Repeat("─", c.width-4))
+		Foreground(lipgloss.Color("12"))
+
+	sb.WriteString(titleStyle.Render("PALETTE"))
 	sb.WriteString("\n")
 
-	// Section header style
+	divider := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8")).
+		Render(strings.Repeat("─", c.width-4))
+	sb.WriteString(divider)
+	sb.WriteString("\n")
+
 	sectionStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")). // Bright Black (muted)
-		Italic(true)
+		Foreground(lipgloss.Color("8")).
+		Bold(true)
 
-	// Normal colors section
-	sb.WriteString(sectionStyle.Render("Normal"))
+	// Normal section
+	sb.WriteString(sectionStyle.Render("  Normal"))
 	sb.WriteString("\n")
 
-	// Color list
 	for i := 0; i < 16; i++ {
-		// Add divider between normal and bright colors
 		if i == 8 {
 			sb.WriteString("\n")
-			sb.WriteString(sectionStyle.Render("Bright"))
+			sb.WriteString(sectionStyle.Render("  Bright"))
 			sb.WriteString("\n")
 		}
 
 		col := c.palette.GetColor(i)
 		roleName := c.palette.GetRoleName(i)
 
-		// Create swatch
+		// 6-wide swatch for visual prominence
 		swatch := lipgloss.NewStyle().
 			Background(lipgloss.Color(col.Hex)).
-			Render("    ")
+			Render("      ")
 
-		// Format line
 		indexStr := fmt.Sprintf("%2d", i)
-		hexStr := col.Hex
+		hexStr := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("8")).
+			Render(col.Hex)
 
-		// Style based on selection - using ANSI colors
-		var line string
+		roleStr := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("7")).
+			Render(roleName)
+
 		if i == c.cursor && c.focused {
-			// More visually distinct selection with arrow and highlight
+			// Selected: accent left bar + subtle highlight
 			indicator := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("13")). // Bright Magenta
+				Foreground(lipgloss.Color("13")).
 				Bold(true).
-				Render("▶ ")
-			line = fmt.Sprintf("%s%s %s %s  %s", indicator, indexStr, swatch, hexStr, roleName)
-			line = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("15")). // Bright White
-				Background(lipgloss.Color("4")).  // Blue
+				Render("▍")
+
+			idx := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("15")).
 				Bold(true).
-				Width(c.width - 4).
-				Render(line)
+				Render(indexStr)
+
+			hex := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("13")).
+				Render(col.Hex)
+
+			role := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("15")).
+				Bold(true).
+				Render(roleName)
+
+			line := fmt.Sprintf("%s %s %s %s  %s", indicator, idx, swatch, hex, role)
+			sb.WriteString(line)
+		} else if i == c.cursor {
+			line := fmt.Sprintf("  %s %s %s  %s", indexStr, swatch, hexStr, roleStr)
+			sb.WriteString(line)
 		} else {
-			prefix := "  "
-			if i == c.cursor {
-				prefix = "▶ "
-			}
-			line = fmt.Sprintf("%s%s %s %s  %s", prefix, indexStr, swatch, hexStr, roleName)
+			dimIdx := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("8")).
+				Render(indexStr)
+			line := fmt.Sprintf("  %s %s %s  %s", dimIdx, swatch, hexStr, roleStr)
+			sb.WriteString(line)
 		}
 
-		sb.WriteString(line)
 		sb.WriteString("\n")
 	}
 
-	// Border style - using ANSI colors
+	borderColor := lipgloss.Color("8")
+	if c.focused {
+		borderColor = lipgloss.Color("5")
+	}
+
 	borderStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("8")). // Bright Black
+		BorderForeground(borderColor).
 		Padding(1).
 		Width(c.width)
-
-	if c.focused {
-		borderStyle = borderStyle.BorderForeground(lipgloss.Color("5")) // Magenta
-	}
 
 	return borderStyle.Render(sb.String())
 }

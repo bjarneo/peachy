@@ -55,8 +55,7 @@ var (
 			Bold(true).
 			Foreground(ANSIBrightWhite).
 			Background(ColorPrimary).
-			Padding(0, 1).
-			MarginBottom(1)
+			Padding(0, 1)
 
 	TitleStyle = lipgloss.NewStyle().
 			Bold(true).
@@ -64,6 +63,18 @@ var (
 
 	SubtitleStyle = lipgloss.NewStyle().
 			Foreground(ColorMuted)
+
+	// Badge style for mode indicators
+	BadgeStyle = lipgloss.NewStyle().
+			Foreground(ANSIBrightWhite).
+			Background(ColorSecondary).
+			Padding(0, 1).
+			Bold(true)
+
+	BadgeMutedStyle = lipgloss.NewStyle().
+			Foreground(ANSIBrightWhite).
+			Background(ColorMuted).
+			Padding(0, 1)
 
 	// Panel styles
 	PanelStyle = lipgloss.NewStyle().
@@ -153,6 +164,15 @@ var (
 			Border(lipgloss.DoubleBorder()).
 			BorderForeground(ColorPrimary).
 			Padding(1, 2)
+
+	// Divider styles
+	DividerStyle = lipgloss.NewStyle().
+			Foreground(ColorBorder)
+
+	// Section header
+	SectionStyle = lipgloss.NewStyle().
+			Foreground(ColorMuted).
+			Bold(true)
 )
 
 // ColorSwatch creates a colored block for displaying a color
@@ -169,4 +189,12 @@ func ColorSwatchSmall(hexColor string) string {
 		Background(lipgloss.Color(hexColor)).
 		Width(2).
 		Render("  ")
+}
+
+// ColorSwatchWide creates a wide colored block for prominent display
+func ColorSwatchWide(hexColor string, width int) string {
+	return lipgloss.NewStyle().
+		Background(lipgloss.Color(hexColor)).
+		Width(width).
+		Render(lipgloss.NewStyle().Width(width).Render(""))
 }

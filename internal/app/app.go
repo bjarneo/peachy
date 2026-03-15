@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"os"
 
 	"peachy/internal/ui"
 
@@ -62,14 +61,6 @@ func (a *App) Run() error {
 
 // CheckDependencies verifies required dependencies are installed
 func CheckDependencies() error {
-	// Check for ImageMagick
-	_, err := os.Stat("/usr/bin/convert")
-	if err != nil {
-		// Try which
-		_, err = os.Stat("/usr/local/bin/convert")
-		if err != nil {
-			return fmt.Errorf("ImageMagick not found. Please install it:\n  Arch: sudo pacman -S imagemagick\n  Ubuntu: sudo apt install imagemagick\n  macOS: brew install imagemagick")
-		}
-	}
+	// No external dependencies required - color extraction uses native Go median-cut
 	return nil
 }

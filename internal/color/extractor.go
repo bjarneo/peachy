@@ -1,36 +1,35 @@
 package color
 
 import (
-	"bufio"
 	"fmt"
-	"os/exec"
-	"regexp"
 	"sort"
-	"strconv"
-	"strings"
 
 	"peachy/internal/shared"
+
+	"github.com/disintegration/imaging"
+	_ "golang.org/x/image/webp"
 )
 
-// Extractor handles color extraction from images using ImageMagick
+const (
+	// imageScaleSize is the max dimension for fast processing (pixels)
+	imageScaleSize = 300
+
+	// minPixelsToSample is the minimum number of pixels needed for reliable extraction
+	minPixelsToSample = 1000
+
+	// maxPixelsToSample caps how many pixels we sample from scaled images
+	maxPixelsToSample = 40000
+
+	// dominantColorsToExtract is the target number of colors from median-cut
+	dominantColorsToExtract = 48
+)
+
+// Extractor handles color extraction from images using native median-cut
 type Extractor struct{}
 
 // NewExtractor creates a new color extractor
 func NewExtractor() *Extractor {
 	return &Extractor{}
-}
-
-// CheckImageMagick verifies that ImageMagick is installed
-func (e *Extractor) CheckImageMagick() error {
-	// Try magick first (ImageMagick 7), then convert (ImageMagick 6)
-	cmd := exec.Command("magick", "-version")
-	if err := cmd.Run(); err != nil {
-		cmd = exec.Command("convert", "-version")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("ImageMagick not found. Please install it: sudo pacman -S imagemagick")
-		}
-	}
-	return nil
 }
 
 // colorWithCount holds a color and its pixel count for sorting by dominance
@@ -39,42 +38,211 @@ type colorWithCount struct {
 	Count int
 }
 
-// ExtractColors extracts 32 dominant colors from an image using histogram
-// Colors are returned sorted by frequency (most dominant first)
-func (e *Extractor) ExtractColors(imagePath string) ([]Color, error) {
-	if err := e.CheckImageMagick(); err != nil {
-		return nil, err
+// rgbPixel is a lightweight RGB value for pixel processing
+type rgbPixel struct {
+	r, g, b uint8
+}
+
+// colorBucket represents a group of pixels for median-cut quantization
+type colorBucket struct {
+	colors []rgbPixel
+}
+
+func (b *colorBucket) ranges() (rRange, gRange, bRange int) {
+	if len(b.colors) == 0 {
+		return 0, 0, 0
+	}
+	rMin, rMax := b.colors[0].r, b.colors[0].r
+	gMin, gMax := b.colors[0].g, b.colors[0].g
+	bMin, bMax := b.colors[0].b, b.colors[0].b
+
+	for _, c := range b.colors[1:] {
+		if c.r < rMin {
+			rMin = c.r
+		}
+		if c.r > rMax {
+			rMax = c.r
+		}
+		if c.g < gMin {
+			gMin = c.g
+		}
+		if c.g > gMax {
+			gMax = c.g
+		}
+		if c.b < bMin {
+			bMin = c.b
+		}
+		if c.b > bMax {
+			bMax = c.b
+		}
+	}
+	return int(rMax) - int(rMin), int(gMax) - int(gMin), int(bMax) - int(bMin)
+}
+
+func (b *colorBucket) longestChannel() int {
+	rr, gr, br := b.ranges()
+	if rr >= gr && rr >= br {
+		return 0
+	}
+	if gr >= br {
+		return 1
+	}
+	return 2
+}
+
+func (b *colorBucket) split() (*colorBucket, *colorBucket) {
+	ch := b.longestChannel()
+	sort.Slice(b.colors, func(i, j int) bool {
+		switch ch {
+		case 0:
+			return b.colors[i].r < b.colors[j].r
+		case 1:
+			return b.colors[i].g < b.colors[j].g
+		default:
+			return b.colors[i].b < b.colors[j].b
+		}
+	})
+	mid := len(b.colors) / 2
+	return &colorBucket{colors: b.colors[:mid]}, &colorBucket{colors: b.colors[mid:]}
+}
+
+func (b *colorBucket) averageColor() (rgbPixel, int) {
+	if len(b.colors) == 0 {
+		return rgbPixel{}, 0
+	}
+	var rSum, gSum, bSum int
+	for _, c := range b.colors {
+		rSum += int(c.r)
+		gSum += int(c.g)
+		bSum += int(c.b)
+	}
+	n := len(b.colors)
+	return rgbPixel{
+		r: uint8(rSum / n),
+		g: uint8(gSum / n),
+		b: uint8(bSum / n),
+	}, n
+}
+
+func (b *colorBucket) volume() int {
+	rr, gr, br := b.ranges()
+	return rr * gr * br * len(b.colors)
+}
+
+// medianCut performs median-cut color quantization on pixel data
+func medianCut(pixels []rgbPixel, numColors int) []colorWithCount {
+	if len(pixels) == 0 {
+		return nil
 	}
 
-	// Use ImageMagick histogram to extract colors sorted by frequency
-	// This matches Aether's approach: scale image, reduce to 32 colors, get histogram
-	cmd := exec.Command("magick", imagePath,
-		"-scale", "800x600>",
-		"-colors", "32",
-		"-depth", "8",
-		"-quality", "85",
-		"-format", "%c",
-		"histogram:info:-")
+	if len(pixels) <= numColors {
+		seen := make(map[rgbPixel]bool)
+		var result []colorWithCount
+		for _, p := range pixels {
+			if !seen[p] {
+				seen[p] = true
+				result = append(result, colorWithCount{
+					Color: NewColorFromRGB(p.r, p.g, p.b),
+					Count: 1,
+				})
+			}
+		}
+		return result
+	}
 
-	output, err := cmd.Output()
+	buckets := []*colorBucket{{colors: pixels}}
+
+	for len(buckets) < numColors {
+		// Find bucket with largest volume that can be split
+		maxVolume := 0
+		maxIdx := -1
+		for i, b := range buckets {
+			if len(b.colors) > 1 {
+				v := b.volume()
+				if v > maxVolume {
+					maxVolume = v
+					maxIdx = i
+				}
+			}
+		}
+		if maxIdx == -1 {
+			break
+		}
+
+		left, right := buckets[maxIdx].split()
+		newBuckets := make([]*colorBucket, 0, len(buckets)+1)
+		newBuckets = append(newBuckets, buckets[:maxIdx]...)
+		newBuckets = append(newBuckets, left, right)
+		newBuckets = append(newBuckets, buckets[maxIdx+1:]...)
+		buckets = newBuckets
+	}
+
+	var result []colorWithCount
+	for _, b := range buckets {
+		avg, count := b.averageColor()
+		if count > 0 {
+			result = append(result, colorWithCount{
+				Color: NewColorFromRGB(avg.r, avg.g, avg.b),
+				Count: count,
+			})
+		}
+	}
+	return result
+}
+
+// ExtractColors extracts dominant colors from an image using native median-cut
+// Colors are returned sorted by frequency (most dominant first)
+func (e *Extractor) ExtractColors(imagePath string) ([]Color, error) {
+	img, err := imaging.Open(imagePath)
 	if err != nil {
-		// Fallback to convert command (ImageMagick 6)
-		cmd = exec.Command("convert", imagePath,
-			"-scale", "800x600>",
-			"-colors", "32",
-			"-depth", "8",
-			"-quality", "85",
-			"-format", "%c",
-			"histogram:info:-")
-		output, err = cmd.Output()
-		if err != nil {
-			return nil, fmt.Errorf("failed to extract colors: %w", err)
+		return nil, fmt.Errorf("failed to open image: %w", err)
+	}
+
+	// Scale to imageScaleSize for fast processing (preserves aspect ratio)
+	img = imaging.Fit(img, imageScaleSize, imageScaleSize, imaging.Lanczos)
+
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	totalPixels := width * height
+	sampleRate := totalPixels / maxPixelsToSample
+	if sampleRate < 1 {
+		sampleRate = 1
+	}
+
+	var pixels []rgbPixel
+	for y := bounds.Min.Y; y < bounds.Max.Y; y += sampleRate {
+		for x := bounds.Min.X; x < bounds.Max.X; x += sampleRate {
+			r, g, b, a := img.At(x, y).RGBA()
+			// Skip transparent pixels
+			if a < 0x8000 {
+				continue
+			}
+			pixels = append(pixels, rgbPixel{
+				r: uint8(r >> 8),
+				g: uint8(g >> 8),
+				b: uint8(b >> 8),
+			})
 		}
 	}
 
-	colors, err := parseHistogramOutput(string(output))
-	if err != nil {
-		return nil, err
+	if len(pixels) < minPixelsToSample/10 {
+		return nil, fmt.Errorf("not enough pixels to extract colors")
+	}
+
+	quantized := medianCut(pixels, dominantColorsToExtract)
+	if len(quantized) == 0 {
+		return nil, fmt.Errorf("no colors extracted from image")
+	}
+
+	// Sort by count (most dominant first)
+	sort.Slice(quantized, func(i, j int) bool {
+		return quantized[i].Count > quantized[j].Count
+	})
+
+	colors := make([]Color, len(quantized))
+	for i, c := range quantized {
+		colors[i] = c.Color
 	}
 
 	if len(colors) < 8 {
@@ -102,56 +270,23 @@ func (e *Extractor) ExtractPalette(imagePath string, mode ExtractionMode, lightM
 		palette = GenerateMonochromaticPalette(colors, lightMode)
 	case ModeAnalogous:
 		palette = GenerateAnalogousPalette(colors, lightMode)
+	case ModeColorful:
+		palette = GenerateColorfulPalette(colors, lightMode)
+	case ModeMuted:
+		palette = GenerateMutedPalette(colors, lightMode)
+	case ModeBright:
+		palette = GenerateBrightPalette(colors, lightMode)
 	default:
 		palette = GenerateNormalPalette(colors, lightMode)
 	}
 
-	// Apply brightness normalization for readability (matches Aether)
+	// Apply brightness normalization for readability
 	NormalizeBrightness(palette)
 
 	return palette, nil
 }
 
-// parseHistogramOutput parses ImageMagick histogram output
-// Returns colors sorted by frequency (most dominant first)
-func parseHistogramOutput(output string) ([]Color, error) {
-	var colorData []colorWithCount
-
-	// Match histogram lines: "  12345: (R,G,B) #RRGGBB srgb(...)"
-	hexPattern := regexp.MustCompile(`^\s*(\d+):\s*\([^)]+\)\s*(#[0-9A-Fa-f]{6})`)
-
-	scanner := bufio.NewScanner(strings.NewReader(output))
-	for scanner.Scan() {
-		line := scanner.Text()
-		matches := hexPattern.FindStringSubmatch(line)
-		if len(matches) >= 3 {
-			count, _ := strconv.Atoi(matches[1])
-			color, err := NewColorFromHex(matches[2])
-			if err == nil {
-				colorData = append(colorData, colorWithCount{Color: color, Count: count})
-			}
-		}
-	}
-
-	if len(colorData) == 0 {
-		return nil, fmt.Errorf("no colors found in image")
-	}
-
-	// Sort by count descending (most dominant first)
-	sort.Slice(colorData, func(i, j int) bool {
-		return colorData[i].Count > colorData[j].Count
-	})
-
-	colors := make([]Color, len(colorData))
-	for i, c := range colorData {
-		colors[i] = c.Color
-	}
-
-	return colors, nil
-}
-
 // IsValidImage checks if the file is a valid image format
-// This is a convenience wrapper around shared.IsValidImage for package compatibility
 func IsValidImage(path string) bool {
 	return shared.IsValidImage(path)
 }

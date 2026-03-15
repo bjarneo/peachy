@@ -11,7 +11,10 @@ func TestNextMode(t *testing.T) {
 		{ModeMaterial, ModePastel},
 		{ModePastel, ModeMonochromatic},
 		{ModeMonochromatic, ModeAnalogous},
-		{ModeAnalogous, ModeNormal},
+		{ModeAnalogous, ModeColorful},
+		{ModeColorful, ModeMuted},
+		{ModeMuted, ModeBright},
+		{ModeBright, ModeNormal},
 	}
 
 	for _, tt := range tests {
@@ -29,11 +32,14 @@ func TestPrevMode(t *testing.T) {
 		current ExtractionMode
 		want    ExtractionMode
 	}{
-		{ModeNormal, ModeAnalogous},
+		{ModeNormal, ModeBright},
 		{ModeMaterial, ModeNormal},
 		{ModePastel, ModeMaterial},
 		{ModeMonochromatic, ModePastel},
 		{ModeAnalogous, ModeMonochromatic},
+		{ModeColorful, ModeAnalogous},
+		{ModeMuted, ModeColorful},
+		{ModeBright, ModeMuted},
 	}
 
 	for _, tt := range tests {
@@ -61,6 +67,12 @@ func TestParseMode(t *testing.T) {
 		{"mono", ModeMonochromatic},
 		{"Mono", ModeMonochromatic},
 		{"analogous", ModeAnalogous},
+		{"colorful", ModeColorful},
+		{"Colorful", ModeColorful},
+		{"muted", ModeMuted},
+		{"Muted", ModeMuted},
+		{"bright", ModeBright},
+		{"Bright", ModeBright},
 		{"invalid", ModeNormal},
 		{"", ModeNormal},
 	}
@@ -76,7 +88,6 @@ func TestParseMode(t *testing.T) {
 }
 
 func TestModeNames(t *testing.T) {
-	// Ensure all modes have names
 	for _, mode := range AllModes {
 		name, ok := ModeNames[mode]
 		if !ok {
@@ -89,7 +100,6 @@ func TestModeNames(t *testing.T) {
 }
 
 func TestModeDescriptions(t *testing.T) {
-	// Ensure all modes have descriptions
 	for _, mode := range AllModes {
 		desc, ok := ModeDescriptions[mode]
 		if !ok {
@@ -102,7 +112,6 @@ func TestModeDescriptions(t *testing.T) {
 }
 
 func TestModeCycleComplete(t *testing.T) {
-	// Test that cycling through all modes returns to start
 	start := ModeNormal
 	current := start
 

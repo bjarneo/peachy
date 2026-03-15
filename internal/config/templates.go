@@ -114,7 +114,68 @@ func BuildTemplateVariables(p *color.Palette) map[string]string {
 		vars[fmt.Sprintf("color%d", i)] = p.Colors[i].Hex
 	}
 
+	// Derived shade variables (matches Aether's ConfigWriter._buildVariables)
+	vars["bg"] = vars["background"]
+	vars["fg"] = vars["foreground"]
+	vars["dark_bg"] = darkenRGB(vars["background"], 75)
+	vars["darker_bg"] = darkenRGB(vars["background"], 50)
+	vars["lighter_bg"] = lightenRGB(vars["background"], 10)
+	vars["dark_fg"] = darkenRGB(vars["foreground"], 75)
+	vars["light_fg"] = lightenRGB(vars["foreground"], 15)
+	vars["bright_fg"] = lightenRGB(vars["foreground"], 25)
+	vars["muted"] = vars["bright_black"]
+	vars["purple"] = vars["magenta"]
+	vars["bright_purple"] = vars["bright_magenta"]
+	vars["orange"] = lightenRGB(vars["red"], 15)
+	vars["brown"] = darkenRGB(vars["orange"], 60)
+	vars["accent"] = vars["blue"]
+	vars["cursor"] = vars["foreground"]
+	vars["selection"] = vars["lighter_bg"]
+	vars["selection_foreground"] = vars["foreground"]
+	vars["selection_background"] = vars["lighter_bg"]
+
+	// Theme type based on background lightness
+	if p.Background.HSL.L > 50 {
+		vars["theme_type"] = "light"
+	} else {
+		vars["theme_type"] = "dark"
+	}
+
 	return vars
+}
+
+// darkenRGB multiplies each RGB channel by percent/100 (75 = 75% of original)
+func darkenRGB(hex string, percent int) string {
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) != 6 {
+		return "#" + hex
+	}
+
+	var r, g, b int
+	_, _ = fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+
+	r = (r * percent) / 100
+	g = (g * percent) / 100
+	b = (b * percent) / 100
+
+	return fmt.Sprintf("#%02X%02X%02X", r, g, b)
+}
+
+// lightenRGB blends each RGB channel toward white by percent/100 (15 = 15% closer to white)
+func lightenRGB(hex string, percent int) string {
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) != 6 {
+		return "#" + hex
+	}
+
+	var r, g, b int
+	_, _ = fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+
+	r = r + (255-r)*percent/100
+	g = g + (255-g)*percent/100
+	b = b + (255-b)*percent/100
+
+	return fmt.Sprintf("#%02X%02X%02X", r, g, b)
 }
 
 // ProcessTemplateContent processes template content and replaces variables

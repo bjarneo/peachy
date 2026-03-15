@@ -1,49 +1,62 @@
 -- Peachy generated colorscheme for Neovim
--- Uses aether.nvim with dynamic colors
+-- Uses aether.nvim v3 with dynamic colors
 -- Place in ~/.config/nvim/lua/plugins/
 
 return {
-    {
-        "bjarneo/aether.nvim",
-        branch = "v2",
-        name = "aether",
-        priority = 1000,
-        opts = {
-            transparent = false,
-            colors = {
-                -- Background colors
-                bg = "{background}",
-                bg_dark = "{background}",
-                bg_highlight = "{bright_black}",
+  {
+    "bjarneo/aether.nvim",
+    branch = "v3",
+    name = "aether",
+    priority = 1000,
+    opts = {
+      colors = {
+        bg         = "{bg}",
+        dark_bg    = "{dark_bg}",
+        darker_bg  = "{darker_bg}",
+        lighter_bg = "{lighter_bg}",
 
-                -- Foreground colors
-                fg = "{foreground}",
-                fg_dark = "{white}",
-                comment = "{bright_black}",
+        fg         = "{fg}",
+        dark_fg    = "{dark_fg}",
+        light_fg   = "{light_fg}",
+        bright_fg  = "{bright_fg}",
+        muted      = "{muted}",
 
-                -- Accent colors
-                red = "{red}",
-                orange = "{bright_red}",
-                yellow = "{yellow}",
-                green = "{green}",
-                cyan = "{cyan}",
-                blue = "{blue}",
-                purple = "{magenta}",
-                magenta = "{bright_magenta}",
-            },
-        },
-        config = function(_, opts)
-            require("aether").setup(opts)
-            vim.cmd.colorscheme("aether")
+        red        = "{red}",
+        yellow     = "{yellow}",
+        orange     = "{orange}",
+        green      = "{green}",
+        cyan       = "{cyan}",
+        blue       = "{blue}",
+        purple     = "{purple}",
+        brown      = "{brown}",
 
-            -- Enable hot reload
-            require("aether.hotreload").setup()
-        end,
+        bright_red    = "{bright_red}",
+        bright_yellow = "{bright_yellow}",
+        bright_green  = "{bright_green}",
+        bright_cyan   = "{bright_cyan}",
+        bright_blue   = "{bright_blue}",
+        bright_purple = "{bright_purple}",
+
+        accent               = "{accent}",
+        cursor               = "{cursor}",
+        foreground           = "{foreground}",
+        background           = "{background}",
+        selection             = "{lighter_bg}",
+        selection_foreground = "{foreground}",
+        selection_background = "{lighter_bg}",
+      },
     },
-    {
-        "LazyVim/LazyVim",
-        opts = {
-            colorscheme = "aether",
-        },
+    -- set up hot reload
+    config = function(_, opts)
+      require("aether").setup(opts)
+      vim.cmd.colorscheme("aether")
+      require("aether.hotreload").setup()
+    end,
+  },
+  {
+    "LazyVim/LazyVim",
+    opts = {
+      colorscheme = "aether",
     },
+  },
 }

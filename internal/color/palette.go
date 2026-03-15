@@ -113,9 +113,10 @@ func (p *Palette) SetColor(index int, c Color) {
 		p.Colors[index] = c
 
 		// Update background/foreground if needed
-		if index == 0 {
+		switch index {
+		case 0:
 			p.Background = c
-		} else if index == 7 {
+		case 7:
 			p.Foreground = c
 		}
 	}

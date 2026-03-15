@@ -5,7 +5,7 @@ import "math"
 // GenerateNormalPalette auto-detects image type and generates appropriate palette
 func GenerateNormalPalette(colors []Color, lightMode bool) *Palette {
 	if IsMonochromeImage(colors) {
-		return generateGrayscalePalette(colors, lightMode)
+		return generateMonochromePalette(colors, lightMode)
 	}
 
 	if HasLowColorDiversity(colors) {
@@ -22,11 +22,11 @@ func GenerateMaterialPalette(colors []Color, lightMode bool) *Palette {
 
 	// Material Design backgrounds
 	if lightMode {
-		p.Colors[0], _ = NewColorFromHex("#fafafa") // Grey 50
-		p.Colors[7], _ = NewColorFromHex("#212121") // Grey 900
+		p.Colors[0], _ = NewColorFromHex("#fafafa")
+		p.Colors[7], _ = NewColorFromHex("#212121")
 	} else {
-		p.Colors[0], _ = NewColorFromHex("#121212") // Dark background
-		p.Colors[7], _ = NewColorFromHex("#ffffff") // Pure white
+		p.Colors[0], _ = NewColorFromHex("#121212")
+		p.Colors[7], _ = NewColorFromHex("#ffffff")
 	}
 
 	// Find best ANSI color matches from image colors
@@ -34,7 +34,6 @@ func GenerateMaterialPalette(colors []Color, lightMode bool) *Palette {
 		matchIndex := FindBestColorMatch(targetHue, colors, usedIndices)
 		matchedColor := colors[matchIndex]
 
-		// Apply Material Design refinement
 		refinedSaturation := math.Max(matchedColor.HSL.S, 35)
 		var refinedLightness float64
 		if lightMode {
@@ -82,55 +81,124 @@ func GenerateMaterialPalette(colors []Color, lightMode bool) *Palette {
 
 // GeneratePastelPalette creates soft, muted colors from image hues
 func GeneratePastelPalette(colors []Color, lightMode bool) *Palette {
-	// Start with chromatic palette
-	base := generateChromaticPalette(colors, lightMode)
-
-	// Convert all colors to pastel
-	for i := 0; i < 16; i++ {
-		c := base.Colors[i]
-
+	return transformChromaticPalette(colors, lightMode, func(i int, c Color, light bool) Color {
 		switch i {
-		case 0: // Background
-			if lightMode {
-				base.Colors[i] = NewColorFromHSL(c.HSL.H, 10, 95)
-			} else {
-				base.Colors[i] = NewColorFromHSL(c.HSL.H, 15, 20)
+		case 0:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 10, 95)
 			}
-		case 7, 15: // Foreground
-			if lightMode {
-				base.Colors[i] = NewColorFromHSL(c.HSL.H, 25, 35)
-			} else {
-				base.Colors[i] = NewColorFromHSL(c.HSL.H, 20, 75)
+			return NewColorFromHSL(c.HSL.H, 15, 20)
+		case 7, 15:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 25, 35)
 			}
-		case 8: // Comment gray
-			if lightMode {
-				base.Colors[i] = NewColorFromHSL(c.HSL.H, 15, 65)
-			} else {
-				base.Colors[i] = NewColorFromHSL(c.HSL.H, 12, 45)
+			return NewColorFromHSL(c.HSL.H, 20, 75)
+		case 8:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 15, 65)
 			}
-		default: // ANSI colors
-			pastelSaturation := math.Min(35, c.HSL.S)
-			var pastelLightness float64
-			if lightMode {
-				pastelLightness = 50
-			} else {
-				pastelLightness = 70
+			return NewColorFromHSL(c.HSL.H, 12, 45)
+		default:
+			pastelSat := math.Min(35, c.HSL.S)
+			if light {
+				return NewColorFromHSL(c.HSL.H, pastelSat, 50)
 			}
-			base.Colors[i] = NewColorFromHSL(c.HSL.H, pastelSaturation, pastelLightness)
+			return NewColorFromHSL(c.HSL.H, pastelSat, 70)
 		}
-	}
+	})
+}
 
-	base.Background = base.Colors[0]
-	base.Foreground = base.Colors[7]
+// GenerateColorfulPalette creates a highly saturated, vibrant palette
+func GenerateColorfulPalette(colors []Color, lightMode bool) *Palette {
+	return transformChromaticPalette(colors, lightMode, func(i int, c Color, light bool) Color {
+		switch i {
+		case 0:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 8, 98)
+			}
+			return NewColorFromHSL(c.HSL.H, 12, 8)
+		case 7, 15:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 15, 10)
+			}
+			return NewColorFromHSL(c.HSL.H, 10, 95)
+		case 8:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 20, 50)
+			}
+			return NewColorFromHSL(c.HSL.H, 15, 55)
+		default:
+			sat := math.Max(75, math.Min(95, c.HSL.S+30))
+			if light {
+				return NewColorFromHSL(c.HSL.H, sat, math.Max(35, math.Min(55, c.HSL.L)))
+			}
+			return NewColorFromHSL(c.HSL.H, sat, math.Max(55, math.Min(70, c.HSL.L)))
+		}
+	})
+}
 
-	return base
+// GenerateMutedPalette creates a desaturated, subdued palette
+func GenerateMutedPalette(colors []Color, lightMode bool) *Palette {
+	return transformChromaticPalette(colors, lightMode, func(i int, c Color, light bool) Color {
+		switch i {
+		case 0:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 5, 95)
+			}
+			return NewColorFromHSL(c.HSL.H, 8, 15)
+		case 7, 15:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 10, 20)
+			}
+			return NewColorFromHSL(c.HSL.H, 8, 85)
+		case 8:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 8, 60)
+			}
+			return NewColorFromHSL(c.HSL.H, 6, 50)
+		default:
+			sat := math.Max(15, math.Min(35, c.HSL.S*0.5))
+			if light {
+				return NewColorFromHSL(c.HSL.H, sat, math.Max(40, math.Min(60, c.HSL.L)))
+			}
+			return NewColorFromHSL(c.HSL.H, sat, math.Max(50, math.Min(65, c.HSL.L)))
+		}
+	})
+}
+
+// GenerateBrightPalette creates a high-lightness palette with punchy colors
+func GenerateBrightPalette(colors []Color, lightMode bool) *Palette {
+	return transformChromaticPalette(colors, lightMode, func(i int, c Color, light bool) Color {
+		switch i {
+		case 0:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 6, 98)
+			}
+			return NewColorFromHSL(c.HSL.H, 10, 6)
+		case 7, 15:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 12, 15)
+			}
+			return NewColorFromHSL(c.HSL.H, 8, 98)
+		case 8:
+			if light {
+				return NewColorFromHSL(c.HSL.H, 15, 55)
+			}
+			return NewColorFromHSL(c.HSL.H, 12, 65)
+		default:
+			sat := math.Max(45, math.Min(70, c.HSL.S))
+			if light {
+				return NewColorFromHSL(c.HSL.H, sat, math.Max(45, math.Min(65, c.HSL.L+10)))
+			}
+			return NewColorFromHSL(c.HSL.H, sat, math.Max(65, math.Min(80, c.HSL.L+15)))
+		}
+	})
 }
 
 // GenerateMonochromaticPalette creates single hue variations
 func GenerateMonochromaticPalette(colors []Color, lightMode bool) *Palette {
 	p := NewPalette()
 
-	// Find most frequent chromatic color
 	baseColor := FindMostFrequentChromatic(colors)
 	baseHue := baseColor.HSL.H
 
@@ -138,7 +206,6 @@ func GenerateMonochromaticPalette(colors []Color, lightMode bool) *Palette {
 	darkest := sorted[0]
 	lightest := sorted[len(sorted)-1]
 
-	// Background and foreground
 	if lightMode {
 		p.Colors[0] = NewColorFromHSL(baseHue, 8, math.Max(85, lightest.HSL.L))
 		p.Colors[7] = NewColorFromHSL(baseHue, 25, math.Min(30, darkest.HSL.L+10))
@@ -147,7 +214,6 @@ func GenerateMonochromaticPalette(colors []Color, lightMode bool) *Palette {
 		p.Colors[7] = NewColorFromHSL(baseHue, 10, math.Max(80, lightest.HSL.L-10))
 	}
 
-	// ANSI colors 1-6 with base hue and varying saturation/lightness
 	saturationLevels := []float64{40, 50, 45, 55, 42, 48}
 	var lightnessBase float64
 	if lightMode {
@@ -161,16 +227,12 @@ func GenerateMonochromaticPalette(colors []Color, lightMode bool) *Palette {
 		p.Colors[i+1] = NewColorFromHSL(baseHue, saturationLevels[i], lightness)
 	}
 
-	// Color 8: Muted comment
-	var color8Lightness float64
 	if lightMode {
-		color8Lightness = 40
+		p.Colors[8] = NewColorFromHSL(baseHue, 20, 40)
 	} else {
-		color8Lightness = 65
+		p.Colors[8] = NewColorFromHSL(baseHue, 20, 65)
 	}
-	p.Colors[8] = NewColorFromHSL(baseHue, 20, color8Lightness)
 
-	// Colors 9-14: Brighter versions
 	brightSaturationLevels := []float64{60, 70, 65, 75, 62, 68}
 	for i := 0; i < 6; i++ {
 		baseLightness := lightnessBase + (float64(i)-2.5)*5
@@ -184,7 +246,6 @@ func GenerateMonochromaticPalette(colors []Color, lightMode bool) *Palette {
 		p.Colors[i+9] = NewColorFromHSL(baseHue, brightSaturationLevels[i], lightness)
 	}
 
-	// Color 15
 	if lightMode {
 		p.Colors[15] = NewColorFromHSL(baseHue, 30, math.Min(25, darkest.HSL.L+5))
 	} else {
@@ -201,7 +262,6 @@ func GenerateMonochromaticPalette(colors []Color, lightMode bool) *Palette {
 func GenerateAnalogousPalette(colors []Color, lightMode bool) *Palette {
 	p := NewPalette()
 
-	// Find most saturated color as base
 	chromatic := SortBySaturation(colors)
 	var baseColor Color
 	if len(chromatic) > 0 && chromatic[0].HSL.S > MonochromeSaturationThreshold {
@@ -217,7 +277,6 @@ func GenerateAnalogousPalette(colors []Color, lightMode bool) *Palette {
 	darkest := sorted[0]
 	lightest := sorted[len(sorted)-1]
 
-	// Background and foreground
 	if lightMode {
 		p.Colors[0] = NewColorFromHSL(baseHue, 12, math.Max(90, lightest.HSL.L))
 		p.Colors[7] = NewColorFromHSL(baseHue, 30, math.Min(25, darkest.HSL.L+10))
@@ -226,7 +285,6 @@ func GenerateAnalogousPalette(colors []Color, lightMode bool) *Palette {
 		p.Colors[7] = NewColorFromHSL(baseHue, 15, math.Max(85, lightest.HSL.L-10))
 	}
 
-	// ANSI colors 1-6 with analogous hues (±30 degrees)
 	analogousOffsets := []float64{-30, -20, -10, 10, 20, 30}
 	saturationLevels := []float64{45, 50, 48, 52, 47, 50}
 	var lightnessBase float64
@@ -247,14 +305,12 @@ func GenerateAnalogousPalette(colors []Color, lightMode bool) *Palette {
 		p.Colors[i+1] = NewColorFromHSL(hue, saturationLevels[i], lightness)
 	}
 
-	// Color 8 (comment)
 	if lightMode {
 		p.Colors[8] = NewColorFromHSL(baseHue, 20, 55)
 	} else {
 		p.Colors[8] = NewColorFromHSL(baseHue, 15, 45)
 	}
 
-	// Colors 9-14: Brighter analogous
 	for i := 0; i < 6; i++ {
 		hue := math.Mod(baseHue+analogousOffsets[i]+360, 360)
 		var lightness float64
@@ -266,7 +322,6 @@ func GenerateAnalogousPalette(colors []Color, lightMode bool) *Palette {
 		p.Colors[i+9] = NewColorFromHSL(hue, saturationLevels[i]+8, lightness)
 	}
 
-	// Color 15
 	if lightMode {
 		p.Colors[15] = NewColorFromHSL(baseHue, 20, 20)
 	} else {
@@ -280,12 +335,12 @@ func GenerateAnalogousPalette(colors []Color, lightMode bool) *Palette {
 }
 
 // generateChromaticPalette generates a vibrant palette from diverse colors
-// This matches Aether's generateChromaticPalette function
+// Uses optimal global ANSI assignment and synthesizes missing hues
 func generateChromaticPalette(colors []Color, lightMode bool) *Palette {
 	p := NewPalette()
 	usedIndices := make(map[int]bool)
 
-	// Find background (darkest or lightest)
+	// Find background from top dominant colors
 	bgColor, bgIndex := FindBackgroundColor(colors, lightMode)
 	usedIndices[bgIndex] = true
 
@@ -296,14 +351,35 @@ func generateChromaticPalette(colors []Color, lightMode bool) *Palette {
 	p.Colors[0] = bgColor
 	p.Colors[7] = fgColor
 
-	// Find best matches for ANSI colors 1-6
-	for i, targetHue := range ANSIHues {
-		matchIndex := FindBestColorMatch(targetHue, colors, usedIndices)
-		p.Colors[i+1] = colors[matchIndex]
-		usedIndices[matchIndex] = true
+	// Use global optimal assignment for ANSI colors 1-6
+	assignments := FindOptimalAnsiAssignment(colors, usedIndices)
+
+	// Apply assignments, collecting matched colors for synthesis reference
+	var matchedColors []Color
+	for i := 0; i < 6; i++ {
+		assignment := assignments[i]
+		if assignment != nil && assignment.Score < SynthesisScoreThreshold {
+			c := colors[assignment.PoolIndex]
+			if c.HSL.S >= ANSIMinSaturationForMatch {
+				p.Colors[i+1] = c
+				matchedColors = append(matchedColors, c)
+				usedIndices[assignment.PoolIndex] = true
+				continue
+			}
+		}
+		// Mark for synthesis
+		p.Colors[i+1] = Color{}
 	}
 
-	// Color 8 (bright black/gray) - brighter in dark mode, darker in light mode
+	// Synthesize any missing ANSI colors to match the palette's mood
+	for i := 0; i < 6; i++ {
+		if p.Colors[i+1].Hex == "" {
+			p.Colors[i+1] = SynthesizeAnsiColor(ANSIHues[i], matchedColors)
+			matchedColors = append(matchedColors, p.Colors[i+1])
+		}
+	}
+
+	// Generate color8 (bright black/gray)
 	bg := p.Colors[0]
 	var color8Lightness float64
 	if IsDarkColor(bg) {
@@ -327,16 +403,50 @@ func generateChromaticPalette(colors []Color, lightMode bool) *Palette {
 	return p
 }
 
-// generateGrayscalePalette generates a monochrome/grayscale palette
-func generateGrayscalePalette(colors []Color, lightMode bool) *Palette {
+// detectMonochromeTint detects the dominant tint hue from mostly-gray colors using circular mean
+func detectMonochromeTint(colors []Color) (hue float64, hasTint bool) {
+	var sinSum, cosSum float64
+	var count int
+
+	for _, c := range colors {
+		if c.HSL.S > 3 {
+			rad := c.HSL.H * math.Pi / 180
+			sinSum += math.Sin(rad)
+			cosSum += math.Cos(rad)
+			count++
+		}
+	}
+
+	if count == 0 {
+		return 0, false
+	}
+
+	avgHue := math.Atan2(sinSum/float64(count), cosSum/float64(count)) * 180 / math.Pi
+	avgHue = math.Mod(avgHue+360, 360)
+	return avgHue, true
+}
+
+// applyTint applies tint influence to an ANSI hue based on the image's dominant tone
+func applyTint(ansiHue, tintHue float64, hasTint bool) float64 {
+	if !hasTint {
+		return ansiHue
+	}
+	hueDiff := math.Mod(tintHue-ansiHue+540, 360) - 180
+	return math.Mod(ansiHue+hueDiff*MonochromeTintStrength+360, 360)
+}
+
+// generateMonochromePalette generates a monochrome palette with distinguishable hue-tinted colors.
+// Uses proper ANSI hue targets at subdued saturation so colors remain
+// functional for syntax highlighting while matching the monochrome mood.
+func generateMonochromePalette(colors []Color, lightMode bool) *Palette {
 	p := NewPalette()
 
 	sorted := SortByLightness(colors)
 	darkest := sorted[0]
 	lightest := sorted[len(sorted)-1]
-	baseHue := darkest.HSL.H
+	tintHue, hasTint := detectMonochromeTint(colors)
 
-	// Background and foreground
+	// Background and foreground from actual image extremes
 	if lightMode {
 		p.Colors[0] = lightest
 		p.Colors[7] = darkest
@@ -345,56 +455,47 @@ func generateGrayscalePalette(colors []Color, lightMode bool) *Palette {
 		p.Colors[7] = lightest
 	}
 
-	// Generate grayscale shades for ANSI colors 1-6
-	const monochromeSaturation = 5.0
-
+	// ANSI colors 1-6: proper hues with subdued saturation, tinted toward image tone
+	var lightnessBase float64
 	if lightMode {
-		startL := darkest.HSL.L + 10
-		endL := math.Min(darkest.HSL.L+40, lightest.HSL.L-10)
-		step := (endL - startL) / 5
-
-		for i := 1; i <= 6; i++ {
-			lightness := startL + float64(i-1)*step
-			p.Colors[i] = NewColorFromHSL(baseHue, monochromeSaturation, lightness)
-		}
+		lightnessBase = 45
 	} else {
-		startL := math.Max(darkest.HSL.L+30, lightest.HSL.L-40)
-		endL := lightest.HSL.L - 10
-		step := (endL - startL) / 5
-
-		for i := 1; i <= 6; i++ {
-			lightness := startL + float64(i-1)*step
-			p.Colors[i] = NewColorFromHSL(baseHue, monochromeSaturation, lightness)
-		}
+		lightnessBase = 60
+	}
+	for i := 0; i < 6; i++ {
+		hue := applyTint(ANSIHues[i], tintHue, hasTint)
+		lightness := lightnessBase + (float64(i)-2.5)*4
+		p.Colors[i+1] = NewColorFromHSL(hue, MonochromeAnsiSaturation, lightness)
 	}
 
-	// Color 8
+	// Color 8: neutral gray for comments
 	var color8Lightness float64
 	if lightMode {
-		color8Lightness = math.Max(0, darkest.HSL.L+5)
+		color8Lightness = math.Max(0, lightest.HSL.L-35)
 	} else {
-		color8Lightness = math.Min(100, lightest.HSL.L-10)
+		color8Lightness = math.Min(100, darkest.HSL.L+40)
 	}
-	p.Colors[8] = NewColorFromHSL(baseHue, monochromeSaturation*0.5, color8Lightness)
+	p.Colors[8] = NewColorFromHSL(tintHue, MonochromeSaturation*MonochromeColor8SatFactor, color8Lightness)
 
-	// Colors 9-14
-	for i := 1; i <= 6; i++ {
-		c := p.Colors[i]
+	// Colors 9-14: brighter, slightly more saturated versions of 1-6
+	for i := 0; i < 6; i++ {
+		hue := applyTint(ANSIHues[i], tintHue, hasTint)
+		baseLightness := lightnessBase + (float64(i)-2.5)*4
 		var adjustment float64
 		if lightMode {
-			adjustment = -10
+			adjustment = -6
 		} else {
-			adjustment = 10
+			adjustment = 6
 		}
-		newL := math.Max(0, math.Min(100, c.HSL.L+adjustment))
-		p.Colors[i+8] = NewColorFromHSL(baseHue, monochromeSaturation, newL)
+		lightness := math.Max(0, math.Min(100, baseLightness+adjustment))
+		p.Colors[i+9] = NewColorFromHSL(hue, MonochromeAnsiBrightSaturation, lightness)
 	}
 
-	// Color 15
+	// Color 15: near-white or near-black from image
 	if lightMode {
-		p.Colors[15] = NewColorFromHSL(baseHue, 2, math.Max(0, darkest.HSL.L-5))
+		p.Colors[15] = NewColorFromHSL(tintHue, 5, math.Max(0, darkest.HSL.L-5))
 	} else {
-		p.Colors[15] = NewColorFromHSL(baseHue, 2, math.Min(100, lightest.HSL.L+5))
+		p.Colors[15] = NewColorFromHSL(tintHue, 5, math.Min(100, lightest.HSL.L+5))
 	}
 
 	p.Background = p.Colors[0]
@@ -411,13 +512,11 @@ func generateSubtleBalancedPalette(colors []Color, lightMode bool) *Palette {
 	darkest := sorted[0]
 	lightest := sorted[len(sorted)-1]
 
-	// Calculate average hue from chromatic colors
 	avgHue := CalculateAverageHue(colors)
 	if avgHue == 0 {
 		avgHue = darkest.HSL.H
 	}
 
-	// Background and foreground
 	if lightMode {
 		p.Colors[0] = lightest
 		p.Colors[7] = darkest
@@ -426,25 +525,20 @@ func generateSubtleBalancedPalette(colors []Color, lightMode bool) *Palette {
 		p.Colors[7] = lightest
 	}
 
-	// ANSI colors 1-6 with balanced subtle saturation
-	const subtleSaturation = 28.0
-
 	for i := 0; i < 6; i++ {
-		lightness := 50 + (float64(i)-2.5)*4 // Vary slightly (42-58%)
-		p.Colors[i+1] = NewColorFromHSL(ANSIHues[i], subtleSaturation, lightness)
+		lightness := 50 + (float64(i)-2.5)*4
+		p.Colors[i+1] = NewColorFromHSL(ANSIHues[i], SubtlePaletteSaturation, lightness)
 	}
 
-	// Color 8
 	var color8Lightness float64
 	if lightMode {
 		color8Lightness = math.Max(0, lightest.HSL.L-40)
 	} else {
 		color8Lightness = math.Min(100, darkest.HSL.L+45)
 	}
-	p.Colors[8] = NewColorFromHSL(avgHue, subtleSaturation*0.5, color8Lightness)
+	p.Colors[8] = NewColorFromHSL(avgHue, SubtlePaletteSaturation*0.5, color8Lightness)
 
-	// Colors 9-14
-	brightSaturation := subtleSaturation + 8
+	brightSaturation := SubtlePaletteSaturation + 8
 	for i := 0; i < 6; i++ {
 		baseLightness := 50 + (float64(i)-2.5)*4
 		var adjustment float64
@@ -457,15 +551,28 @@ func generateSubtleBalancedPalette(colors []Color, lightMode bool) *Palette {
 		p.Colors[i+9] = NewColorFromHSL(ANSIHues[i], brightSaturation, lightness)
 	}
 
-	// Color 15
 	if lightMode {
-		p.Colors[15] = NewColorFromHSL(avgHue, subtleSaturation*0.3, math.Max(0, darkest.HSL.L-5))
+		p.Colors[15] = NewColorFromHSL(avgHue, SubtlePaletteSaturation*0.3, math.Max(0, darkest.HSL.L-5))
 	} else {
-		p.Colors[15] = NewColorFromHSL(avgHue, subtleSaturation*0.3, math.Min(100, lightest.HSL.L+5))
+		p.Colors[15] = NewColorFromHSL(avgHue, SubtlePaletteSaturation*0.3, math.Min(100, lightest.HSL.L+5))
 	}
 
 	p.Background = p.Colors[0]
 	p.Foreground = p.Colors[7]
 
 	return p
+}
+
+// transformChromaticPalette builds a chromatic palette then transforms each color
+func transformChromaticPalette(colors []Color, lightMode bool, transform func(index int, c Color, light bool) Color) *Palette {
+	base := generateChromaticPalette(colors, lightMode)
+
+	for i := 0; i < 16; i++ {
+		base.Colors[i] = transform(i, base.Colors[i], lightMode)
+	}
+
+	base.Background = base.Colors[0]
+	base.Foreground = base.Colors[7]
+
+	return base
 }

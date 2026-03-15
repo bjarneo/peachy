@@ -120,7 +120,7 @@ func (m SplashModel) View() string {
 		Italic(true).
 		Render("Theming by x.com/iamdothash")
 	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf("%s\n", tagline))
+	fmt.Fprintf(&b, "%s\n", tagline)
 
 	// Center everything
 	content := b.String()

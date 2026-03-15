@@ -1,3 +1,5 @@
+version: "2"
+
 run:
   timeout: 5m
   modules-download-mode: readonly
@@ -8,19 +10,18 @@ linters:
     - govet
     - staticcheck
     - unused
-    - gosimple
     - ineffassign
-    - typecheck
-    - gofmt
-    - goimports
     - misspell
     - unconvert
 
-linters-settings:
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: peachy
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - peachy
 
 issues:
   exclude-use-default: false

@@ -11,6 +11,9 @@ const (
 	ModePastel        ExtractionMode = "pastel"
 	ModeMonochromatic ExtractionMode = "monochromatic"
 	ModeAnalogous     ExtractionMode = "analogous"
+	ModeColorful      ExtractionMode = "colorful"
+	ModeMuted         ExtractionMode = "muted"
+	ModeBright        ExtractionMode = "bright"
 )
 
 // AllModes contains all available extraction modes
@@ -20,6 +23,9 @@ var AllModes = []ExtractionMode{
 	ModePastel,
 	ModeMonochromatic,
 	ModeAnalogous,
+	ModeColorful,
+	ModeMuted,
+	ModeBright,
 }
 
 // ModeNames provides human-readable names for each mode
@@ -29,6 +35,9 @@ var ModeNames = map[ExtractionMode]string{
 	ModePastel:        "Pastel",
 	ModeMonochromatic: "Monochromatic",
 	ModeAnalogous:     "Analogous",
+	ModeColorful:      "Colorful",
+	ModeMuted:         "Muted",
+	ModeBright:        "Bright",
 }
 
 // ModeDescriptions provides descriptions for each mode
@@ -38,6 +47,9 @@ var ModeDescriptions = map[ExtractionMode]string{
 	ModePastel:        "Soft, muted colors with low saturation",
 	ModeMonochromatic: "Single hue with varying saturation/lightness",
 	ModeAnalogous:     "Adjacent hues on color wheel (±30 degrees)",
+	ModeColorful:      "Highly saturated, vibrant colors",
+	ModeMuted:         "Desaturated, subdued professional colors",
+	ModeBright:        "High lightness with punchy colors",
 }
 
 // NextMode returns the next mode in the cycle
@@ -74,6 +86,12 @@ func ParseMode(s string) ExtractionMode {
 		return ModePastel
 	case "material":
 		return ModeMaterial
+	case "colorful":
+		return ModeColorful
+	case "muted":
+		return ModeMuted
+	case "bright":
+		return ModeBright
 	default:
 		return ModeNormal
 	}

@@ -5,22 +5,13 @@ import (
 	"sort"
 )
 
-// Constants for color analysis (matching Aether)
+// Constants for color analysis
 const (
 	// Saturation threshold below which a color is considered grayscale (0-100)
 	MonochromeSaturationThreshold = 15.0
 
 	// Percentage of low-saturation colors needed to classify image as monochrome (0-1)
 	MonochromeImageThreshold = 0.7
-
-	// Hue difference (degrees) within which colors are considered similar (0-360)
-	SimilarHueRange = 30.0
-
-	// Lightness difference (%) within which colors are considered similar (0-100)
-	SimilarLightnessRange = 20.0
-
-	// Low diversity threshold - percentage of similar color pairs (0-1)
-	LowDiversityThreshold = 0.6
 
 	// Minimum saturation for chromatic colors (0-100)
 	MinChromaticSaturation = 15.0
@@ -40,6 +31,26 @@ const (
 	OutlierLightnessThreshold    = 25.0
 	BrightThemeThreshold         = 50.0
 	DarkColorThreshold           = 50.0
+
+	// Color scoring thresholds
+	TooDarkThreshold   = 20.0
+	TooBrightThreshold = 85.0
+
+	// Score threshold above which a synthesized color is used instead of a poor match
+	SynthesisScoreThreshold = 180.0
+
+	// Minimum saturation for a color to be considered a valid ANSI match
+	ANSIMinSaturationForMatch = 12.0
+
+	// Monochrome palette settings
+	MonochromeSaturation           = 5.0
+	MonochromeAnsiSaturation       = 30.0
+	MonochromeAnsiBrightSaturation = 40.0
+	MonochromeTintStrength         = 0.15
+	MonochromeColor8SatFactor      = 0.5
+
+	// Subtle balanced palette saturation
+	SubtlePaletteSaturation = 28.0
 )
 
 // ANSI color hue targets (in degrees, 0-360)
@@ -65,37 +76,43 @@ func IsMonochromeImage(colors []Color) bool {
 	return float64(lowSaturationCount)/float64(len(colors)) > MonochromeImageThreshold
 }
 
-// HasLowColorDiversity detects if colors are too similar to each other
+// HasLowColorDiversity detects if colors lack hue diversity using O(n) hue bucketing
 func HasLowColorDiversity(colors []Color) bool {
-	similarCount := 0
-	totalComparisons := 0
+	// Sample first 16 colors for faster analysis
+	sampleSize := len(colors)
+	if sampleSize > 16 {
+		sampleSize = 16
+	}
 
-	for i := 0; i < len(colors); i++ {
-		for j := i + 1; j < len(colors); j++ {
-			c1 := colors[i]
-			c2 := colors[j]
+	// Filter to chromatic colors and bucket by hue
+	const hueBucketSize = 30.0
+	hueBuckets := make([]int, 12)
+	chromaticCount := 0
 
-			// Skip grayscale colors
-			if c1.HSL.S < MonochromeSaturationThreshold || c2.HSL.S < MonochromeSaturationThreshold {
-				continue
-			}
-
-			totalComparisons++
-
-			hueDiff := CalculateHueDistance(c1.HSL.H, c2.HSL.H)
-			lightnessDiff := math.Abs(c1.HSL.L - c2.HSL.L)
-
-			if hueDiff < SimilarHueRange && lightnessDiff < SimilarLightnessRange {
-				similarCount++
-			}
+	for i := 0; i < sampleSize; i++ {
+		c := colors[i]
+		if c.HSL.S >= MonochromeSaturationThreshold {
+			chromaticCount++
+			bucket := int(c.HSL.H/hueBucketSize) % 12
+			hueBuckets[bucket]++
 		}
 	}
 
-	if totalComparisons == 0 {
+	// Need at least 3 chromatic colors to determine diversity
+	if chromaticCount < 3 {
 		return false
 	}
 
-	return float64(similarCount)/float64(totalComparisons) > LowDiversityThreshold
+	// Count occupied hue buckets
+	occupiedBuckets := 0
+	for _, count := range hueBuckets {
+		if count > 0 {
+			occupiedBuckets++
+		}
+	}
+
+	// If colors span fewer than 3 hue buckets, they lack diversity
+	return occupiedBuckets < 3
 }
 
 // CalculateHueDistance calculates circular hue distance between two hues
@@ -135,7 +152,6 @@ func FindMostFrequentChromatic(colors []Color) Color {
 			return c
 		}
 	}
-	// Fallback to first color
 	if len(colors) > 0 {
 		return colors[0]
 	}
@@ -163,15 +179,21 @@ func SortBySaturation(colors []Color) []Color {
 }
 
 // FindBackgroundColor finds the best background color for a mode
-// Returns the color and its original index
 func FindBackgroundColor(colors []Color, lightMode bool) (Color, int) {
+	// Search within top 12 dominant colors for better representation
+	topCount := len(colors)
+	if topCount > 12 {
+		topCount = 12
+	}
+	topColors := colors[:topCount]
+
 	bgIndex := 0
 	bgLightness := 101.0
 	if lightMode {
 		bgLightness = -1.0
 	}
 
-	for i, c := range colors {
+	for i, c := range topColors {
 		if lightMode {
 			if c.HSL.L > bgLightness {
 				bgLightness = c.HSL.L
@@ -185,11 +207,10 @@ func FindBackgroundColor(colors []Color, lightMode bool) (Color, int) {
 		}
 	}
 
-	return colors[bgIndex], bgIndex
+	return topColors[bgIndex], bgIndex
 }
 
 // FindForegroundColor finds the best foreground color for a mode
-// Returns the color and its original index
 func FindForegroundColor(colors []Color, lightMode bool, usedIndices map[int]bool) (Color, int) {
 	fgIndex := 0
 	fgLightness := -1.0
@@ -218,6 +239,38 @@ func FindForegroundColor(colors []Color, lightMode bool, usedIndices map[int]boo
 	return colors[fgIndex], fgIndex
 }
 
+// calculateColorScore calculates how well a color matches a target ANSI hue
+// Balances hue accuracy, saturation preference, and lightness suitability
+// Lower score = better match
+func calculateColorScore(c Color, targetHue float64) float64 {
+	// Hue accuracy - primary factor
+	hueScore := CalculateHueDistance(c.HSL.H, targetHue) * 2.5
+
+	// Saturation preference - strongly prefer chromatic colors
+	var satScore float64
+	if c.HSL.S < ANSIMinSaturationForMatch {
+		satScore = 80
+	} else if c.HSL.S < 20 {
+		satScore = 40
+	} else if c.HSL.S < 30 {
+		satScore = 15
+	} else {
+		satScore = math.Max(0, (50-c.HSL.S)*0.3)
+	}
+
+	// Lightness suitability - prefer mid-range, penalize extremes
+	var lightnessScore float64
+	if c.HSL.L < TooDarkThreshold {
+		lightnessScore = (TooDarkThreshold - c.HSL.L) * 2.5
+	} else if c.HSL.L > TooBrightThreshold {
+		lightnessScore = (c.HSL.L - TooBrightThreshold) * 2
+	} else {
+		lightnessScore = math.Abs(c.HSL.L-55) * 0.2
+	}
+
+	return hueScore + satScore + lightnessScore
+}
+
 // FindBestColorMatch finds the best color for a target ANSI hue
 func FindBestColorMatch(targetHue float64, colors []Color, usedIndices map[int]bool) int {
 	bestIndex := -1
@@ -228,7 +281,7 @@ func FindBestColorMatch(targetHue float64, colors []Color, usedIndices map[int]b
 			continue
 		}
 
-		score := calculateHueMatchScore(c, targetHue)
+		score := calculateColorScore(c, targetHue)
 		if score < bestScore {
 			bestScore = score
 			bestIndex = i
@@ -236,7 +289,6 @@ func FindBestColorMatch(targetHue float64, colors []Color, usedIndices map[int]b
 	}
 
 	if bestIndex == -1 {
-		// Find first unused
 		for i := range colors {
 			if !usedIndices[i] {
 				return i
@@ -248,34 +300,119 @@ func FindBestColorMatch(targetHue float64, colors []Color, usedIndices map[int]b
 	return bestIndex
 }
 
-// calculateHueMatchScore calculates how well a color matches a target hue
-// Lower score is better (matches Aether's implementation)
-func calculateHueMatchScore(c Color, targetHue float64) float64 {
-	// Hue difference is primary factor - multiply by 3 to prioritize it
-	hueDiff := CalculateHueDistance(c.HSL.H, targetHue) * 3
-
-	// Heavily penalize extremely desaturated colors
-	saturationPenalty := 0.0
-	if c.HSL.S < MinChromaticSaturation {
-		saturationPenalty = 50
-	}
-
-	// Reward higher saturation: prefer stronger colors when hues are similar
-	// Invert saturation (100 - s) so lower score = better (more saturated)
-	saturationReward := (100 - c.HSL.S) / 2
-
-	// Very minimal lightness penalties - just avoid extremes
-	lightnessPenalty := 0.0
-	if c.HSL.L < 20 || c.HSL.L > 85 {
-		lightnessPenalty = 10
-	}
-
-	return hueDiff + saturationPenalty + saturationReward + lightnessPenalty
+// ansiAssignment represents a color pool index and its match quality score
+type ansiAssignment struct {
+	PoolIndex int
+	Score     float64
 }
 
-// GenerateBrightVersion creates a lighter version of a color for bright ANSI slots
+// FindOptimalAnsiAssignment finds optimal ANSI color assignments using global greedy matching.
+// Instead of assigning colors sequentially (red first, then green, etc.),
+// this finds the globally best (ANSI slot, color) pair at each step,
+// preventing earlier slots from stealing good matches from later ones.
+func FindOptimalAnsiAssignment(colorPool []Color, usedIndices map[int]bool) [6]*ansiAssignment {
+	type candidate struct {
+		poolIndex int
+		score     float64
+	}
+
+	// Pre-compute and sort scores for all (ANSI slot, color) pairs
+	allScores := make([][]candidate, 6)
+	for a, targetHue := range ANSIHues {
+		candidates := make([]candidate, 0, len(colorPool))
+		for i, c := range colorPool {
+			if usedIndices[i] {
+				continue
+			}
+			candidates = append(candidates, candidate{
+				poolIndex: i,
+				score:     calculateColorScore(c, targetHue),
+			})
+		}
+		sort.Slice(candidates, func(i, j int) bool {
+			return candidates[i].score < candidates[j].score
+		})
+		allScores[a] = candidates
+	}
+
+	var assignments [6]*ansiAssignment
+	assignedPool := make(map[int]bool)
+	for k, v := range usedIndices {
+		if v {
+			assignedPool[k] = true
+		}
+	}
+
+	// Iteratively assign the globally best pair
+	for round := 0; round < 6; round++ {
+		bestAnsi := -1
+		bestPoolIndex := -1
+		bestScore := math.MaxFloat64
+
+		for a := 0; a < 6; a++ {
+			if assignments[a] != nil {
+				continue
+			}
+			// Find best unassigned candidate for this slot
+			for _, cand := range allScores[a] {
+				if assignedPool[cand.poolIndex] {
+					continue
+				}
+				if cand.score < bestScore {
+					bestScore = cand.score
+					bestAnsi = a
+					bestPoolIndex = cand.poolIndex
+				}
+				break // First unassigned is best (list is sorted)
+			}
+		}
+
+		if bestAnsi == -1 {
+			break
+		}
+		assignments[bestAnsi] = &ansiAssignment{PoolIndex: bestPoolIndex, Score: bestScore}
+		assignedPool[bestPoolIndex] = true
+	}
+
+	return assignments
+}
+
+// SynthesizeAnsiColor creates an ANSI color when no good match exists in the image.
+// Uses the average saturation and lightness of already-assigned colors
+// to create a color that fits the palette's visual mood.
+func SynthesizeAnsiColor(targetHue float64, existingColors []Color) Color {
+	var totalS, totalL float64
+	var count int
+
+	for _, c := range existingColors {
+		if c.HSL.S >= ANSIMinSaturationForMatch {
+			totalS += c.HSL.S
+			totalL += c.HSL.L
+			count++
+		}
+	}
+
+	// Fall back to reasonable defaults if no reference colors
+	avgS := 50.0
+	avgL := 55.0
+	if count > 0 {
+		avgS = totalS / float64(count)
+		avgL = totalL / float64(count)
+	}
+
+	// Clamp to ensure the synthesized color is visually clear
+	synS := math.Max(35, math.Min(75, avgS))
+	synL := math.Max(40, math.Min(70, avgL))
+
+	return NewColorFromHSL(targetHue, synS, synL)
+}
+
+// GenerateBrightVersion creates a lighter version of a color for bright ANSI slots.
+// Scales the boost based on available headroom to avoid washing out bright colors.
 func GenerateBrightVersion(c Color) Color {
-	newLightness := math.Min(100, c.HSL.L+BrightColorLightnessBoost)
+	headroom := 90 - c.HSL.L
+	boost := math.Max(5, math.Min(BrightColorLightnessBoost, headroom*0.6))
+	newLightness := math.Min(90, c.HSL.L+boost)
 	newSaturation := math.Min(100, c.HSL.S*BrightColorSaturationBoost)
 	return NewColorFromHSL(c.HSL.H, newSaturation, newLightness)
 }
@@ -291,7 +428,7 @@ func GetChromaticColors(colors []Color) []Color {
 	return result
 }
 
-// CalculateAverageHue calculates the average hue of chromatic colors
+// CalculateAverageHue calculates the average hue of chromatic colors using circular mean
 func CalculateAverageHue(colors []Color) float64 {
 	chromatic := GetChromaticColors(colors)
 	if len(chromatic) == 0 {
@@ -314,14 +451,12 @@ func CalculateAverageHue(colors []Color) float64 {
 }
 
 // NormalizeBrightness adjusts ANSI colors to ensure readability
-// This matches Aether's normalizeBrightness function
 func NormalizeBrightness(p *Palette) {
 	bgLightness := p.Colors[0].HSL.L
 
 	isVeryDarkBg := bgLightness < VeryDarkBackgroundThreshold
 	isVeryLightBg := bgLightness > VeryLightBackgroundThreshold
 
-	// Analyze colors 1-7
 	type colorInfo struct {
 		index      int
 		lightness  float64
@@ -379,7 +514,6 @@ func adjustColorForDarkBackground(p *Palette, index int, lightness float64) {
 	c := p.Colors[index]
 	p.Colors[index] = NewColorFromHSL(c.HSL.H, c.HSL.S, adjustedLightness)
 
-	// Regenerate bright version if applicable
 	if index >= 1 && index <= 6 {
 		p.Colors[index+8] = GenerateBrightVersion(p.Colors[index])
 	}
@@ -394,7 +528,6 @@ func adjustColorForLightBackground(p *Palette, index int, lightness float64) {
 	c := p.Colors[index]
 	p.Colors[index] = NewColorFromHSL(c.HSL.H, c.HSL.S, adjustedLightness)
 
-	// Regenerate bright version if applicable
 	if index >= 1 && index <= 6 {
 		p.Colors[index+8] = GenerateBrightVersion(p.Colors[index])
 	}
@@ -418,7 +551,6 @@ func adjustOutlierColor(p *Palette, index int, lightness, avgLightness float64, 
 	c := p.Colors[index]
 	p.Colors[index] = NewColorFromHSL(c.HSL.H, c.HSL.S, adjustedLightness)
 
-	// Regenerate bright version if applicable
 	if index >= 1 && index <= 6 {
 		p.Colors[index+8] = GenerateBrightVersion(p.Colors[index])
 	}
